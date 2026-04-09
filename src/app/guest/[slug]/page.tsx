@@ -49,6 +49,7 @@ export default async function GuestPage({ params }: Props) {
   const config = await getSettings();
   const globalNote = config["global_note"] || "";
   const note = guest.note || globalNote;
+  const showTable = config["show_table_numbers"] === "true";
 
   return (
     <GuestPageClient
@@ -56,6 +57,7 @@ export default async function GuestPage({ params }: Props) {
         slug: guest.slug,
         name: guest.name,
         addressSubmitted: !!guest.addressSubmittedAt,
+        tableNumber: showTable ? guest.tableNumber : null,
       }}
       note={note}
     />

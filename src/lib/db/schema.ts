@@ -15,6 +15,7 @@ export const guests = pgTable("guests", {
   name: text("name").notNull(),
   partySize: integer("party_size").notNull().default(1),
   partyNames: jsonb("party_names"), // array of individual names
+  tableNumber: integer("table_number"), // reception table assignment
   note: text("note"), // per-guest note (overrides global default)
 
   // Address fields

@@ -11,6 +11,7 @@ interface Guest {
   name: string;
   partySize: number;
   partyNames: string[] | null;
+  tableNumber: number | null;
   note: string | null;
   addressLine1: string | null;
   addressLine2: string | null;
@@ -127,6 +128,10 @@ export default function DashboardClient() {
         case "partySize":
           av = a.partySize;
           bv = b.partySize;
+          break;
+        case "tableNumber":
+          av = a.tableNumber || 999;
+          bv = b.tableNumber || 999;
           break;
         case "opened":
           av = a.firstOpenedAt || "";
@@ -519,6 +524,7 @@ export default function DashboardClient() {
                     {[
                       ["name", "Name"],
                       ["partySize", "Party"],
+                      ["tableNumber", "Table"],
                       ["opened", "Opened"],
                       ["submitted", "Address"],
                     ].map(([key, label]) => (
@@ -551,6 +557,25 @@ export default function DashboardClient() {
                         <p className="text-xs text-ink-faint">/{g.slug}</p>
                       </td>
                       <td className="px-4 py-3 text-ink-soft">{g.partySize}</td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="number"
+                          min="1"
+                          defaultValue={g.tableNumber || ""}
+                          placeholder="—"
+                          onBlur={(e) => {
+                            const val = parseInt(e.target.value) || null;
+                            if (val !== g.tableNumber) {
+                              fetch("/api/guests", {
+                                method: "PUT",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ id: g.id, tableNumber: val }),
+                              }).then(() => fetchAll());
+                            }
+                          }}
+                          className="w-14 px-2 py-1 border border-gold-pale text-xs font-body text-ink text-center focus:outline-none focus:border-gold"
+                        />
+                      </td>
                       <td className="px-4 py-3">
                         {g.firstOpenedAt ? (
                           <span className="text-green-700 text-xs">
@@ -703,6 +728,31 @@ export default function DashboardClient() {
                 placeholder="We can't wait to celebrate with you in paradise..."
                 className="w-full px-4 py-3 bg-white border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold resize-none"
               />
+            </div>
+
+            {/* Reminder threshold */}
+            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+              <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block mb-2">
+                Show table numbers to guests
+              </label>
+              <p className="font-body text-xs text-ink-faint mb-3">
+                When enabled, guests will see their assigned table number on
+                their personal page. Keep this off until you&apos;ve finished
+                assigning tables.
+              </p>
+              <button
+                onClick={() => {
+                  const current = settings["show_table_numbers"] === "true";
+                  saveSetting("show_table_numbers", current ? "false" : "true");
+                }}
+                className={`px-5 py-2 font-body text-[11px] tracking-[2px] uppercase transition-colors ${
+                  settings["show_table_numbers"] === "true"
+                    ? "bg-gold text-white"
+                    : "border border-gold-pale text-ink-soft"
+                }`}
+              >
+                {settings["show_table_numbers"] === "true" ? "Visible to guests" : "Hidden from guests"}
+              </button>
             </div>
 
             {/* Reminder threshold */}

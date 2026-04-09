@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 interface Props {
-  guest: { slug: string; name: string; addressSubmitted: boolean };
+  guest: { slug: string; name: string; addressSubmitted: boolean; tableNumber: number | null };
   note: string;
 }
 
@@ -201,6 +201,18 @@ export default function GuestPageClient({ guest, note }: Props) {
               <p className="font-display italic text-base text-ink-soft leading-relaxed px-4">
                 &ldquo;{note}&rdquo;
               </p>
+            </div>
+          )}
+
+          {/* Table number */}
+          {guest.tableNumber && (
+            <div className="mb-8 animate-fadeUp animation-delay-500">
+              <p className="font-body font-light text-[10px] tracking-[3px] uppercase text-ink-faint mb-2">
+                Your table
+              </p>
+              <div className="w-16 h-16 rounded-full border border-gold mx-auto flex items-center justify-center">
+                <span className="font-display text-2xl text-ink">{guest.tableNumber}</span>
+              </div>
             </div>
           )}
 
