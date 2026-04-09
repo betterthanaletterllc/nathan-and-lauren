@@ -5,14 +5,25 @@ import { signOut } from "next-auth/react";
 import Papa from "papaparse";
 
 // Types
+interface Member {
+  id?: number;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  dietaryRestrictions: string;
+  isChild: boolean;
+}
+
 interface Guest {
   id: number;
   slug: string;
   name: string;
   partySize: number;
-  partyNames: string[] | null;
   tableNumber: number | null;
+  side: string | null;
   note: string | null;
+  members: Member[];
   addressLine1: string | null;
   addressLine2: string | null;
   city: string | null;
@@ -86,8 +97,9 @@ export default function DashboardClient() {
     const opened = guests.filter((g) => g.firstOpenedAt).length;
     const submitted = guests.filter((g) => g.addressSubmittedAt).length;
     const outstanding = total - submitted;
-    const headcount = guests.reduce((s, g) => s + g.partySize, 0);
-    return { total, opened, submitted, outstanding, headcount };
+    const headcount = guests.reduce((s, g) => s + (g.members?.length || g.partySize), 0);
+    const kids = guests.reduce((s, g) => s + (g.members?.filter((m: Member) => m.isChild).length || 0), 0);
+    return { total, opened, submitted, outstanding, headcount, kids };
   }, [guests]);
 
   // Nudge list
@@ -153,11 +165,11 @@ export default function DashboardClient() {
   }, [guests, filter, sortKey, sortAsc]);
 
   // Actions
-  async function addGuest(name: string, partySize: number, partyNames: string[]) {
+  async function addGuest(name: string, members: Member[], side: string) {
     const res = await fetch("/api/guests", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, partySize, partyNames: partyNames.filter(Boolean) }),
+      body: JSON.stringify({ name, members, side: side || null }),
     });
     if (!res.ok) {
       const err = await res.json();
@@ -200,20 +212,14 @@ export default function DashboardClient() {
       header: true,
       skipEmptyLines: true,
       complete: async (results) => {
-        const mapped = results.data.map((row: any) => ({
-          name: row.Name || row.name || "",
-          slug: row.Slug || row.slug || "",
-          partySize: row["Party Size"] || row.partySize || row.party_size || 1,
-          note: row.Note || row.note || "",
-        }));
         const res = await fetch("/api/guests/import", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ guests: mapped }),
+          body: JSON.stringify({ rows: results.data }),
         });
         const result = await res.json();
         alert(
-          `Imported ${result.imported} guests. ${result.skipped} skipped.${result.errors.length ? "\n" + result.errors.join("\n") : ""}`
+          `Imported ${result.imported} households, ${result.members} members. ${result.skipped} skipped.${result.errors?.length ? "\n" + result.errors.join("\n") : ""}`
         );
         fetchAll();
       },
@@ -255,8 +261,10 @@ export default function DashboardClient() {
 
   // Add guest form state
   const [newName, setNewName] = useState("");
-  const [newSize, setNewSize] = useState("1");
-  const [newPartyNames, setNewPartyNames] = useState<string[]>([""]);
+  const [newSide, setNewSide] = useState("");
+  const [newMembers, setNewMembers] = useState<Member[]>([
+    { firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false },
+  ]);
   const [addError, setAddError] = useState("");
 
   const tabClass = (t: Tab) =>
@@ -326,13 +334,14 @@ export default function DashboardClient() {
         {tab === "overview" && (
           <div className="space-y-8">
             {/* Summary cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
               {[
-                ["Invited", stats.total],
+                ["Households", stats.total],
                 ["Opened", stats.opened],
                 ["Addresses In", stats.submitted],
                 ["Outstanding", stats.outstanding],
                 ["Headcount", stats.headcount],
+                ["Kids", stats.kids],
               ].map(([label, val]) => (
                 <div key={label as string} className={cardClass}>
                   <p className="font-body font-light text-[10px] tracking-[3px] uppercase text-ink-faint mb-1">
@@ -436,7 +445,7 @@ export default function DashboardClient() {
               <div className="flex flex-wrap gap-3 items-end">
                 <div className="flex-1 min-w-[180px]">
                   <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-1">
-                    Household / display name
+                    Household name
                   </label>
                   <input
                     type="text"
@@ -446,53 +455,53 @@ export default function DashboardClient() {
                     className="w-full px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
                   />
                 </div>
-                <div className="w-24">
+                <div className="w-32">
                   <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-1">
-                    Party size
+                    Side
                   </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="20"
-                    value={newSize}
-                    onChange={(e) => {
-                      const size = parseInt(e.target.value) || 1;
-                      setNewSize(e.target.value);
-                      setNewPartyNames((prev) => {
-                        const arr = [...prev];
-                        while (arr.length < size) arr.push("");
-                        return arr.slice(0, size);
-                      });
-                    }}
-                    className="w-full px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink focus:outline-none focus:border-gold"
-                  />
+                  <select
+                    value={newSide}
+                    onChange={(e) => setNewSide(e.target.value)}
+                    className="w-full px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink focus:outline-none focus:border-gold bg-white"
+                  >
+                    <option value="">—</option>
+                    <option value="bride">Bride</option>
+                    <option value="groom">Groom</option>
+                    <option value="both">Both</option>
+                  </select>
                 </div>
               </div>
 
-              {/* Individual party member names */}
-              {parseInt(newSize) >= 1 && (
-                <div>
-                  <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-2">
-                    Party member names
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {newPartyNames.map((pn, i) => (
-                      <input
-                        key={i}
-                        type="text"
-                        value={pn}
-                        onChange={(e) => {
-                          const arr = [...newPartyNames];
-                          arr[i] = e.target.value;
-                          setNewPartyNames(arr);
-                        }}
-                        placeholder={`Person ${i + 1} full name`}
-                        className="w-full px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
-                      />
-                    ))}
-                  </div>
+              {/* Members */}
+              <div>
+                <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-2">
+                  Members ({newMembers.length})
+                </label>
+                <div className="space-y-2">
+                  {newMembers.map((m, i) => (
+                    <div key={i} className="grid grid-cols-2 sm:grid-cols-4 gap-2 pb-2 border-b border-sand-dark last:border-0">
+                      <input type="text" value={m.firstName} onChange={(e) => { const arr = [...newMembers]; arr[i] = { ...arr[i], firstName: e.target.value }; setNewMembers(arr); }} placeholder="First name" className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                      <input type="text" value={m.lastName} onChange={(e) => { const arr = [...newMembers]; arr[i] = { ...arr[i], lastName: e.target.value }; setNewMembers(arr); }} placeholder="Last name" className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                      <input type="text" value={m.phone} onChange={(e) => { const arr = [...newMembers]; arr[i] = { ...arr[i], phone: e.target.value }; setNewMembers(arr); }} placeholder="Phone" className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                      <input type="text" value={m.email} onChange={(e) => { const arr = [...newMembers]; arr[i] = { ...arr[i], email: e.target.value }; setNewMembers(arr); }} placeholder="Email" className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                      <input type="text" value={m.dietaryRestrictions} onChange={(e) => { const arr = [...newMembers]; arr[i] = { ...arr[i], dietaryRestrictions: e.target.value }; setNewMembers(arr); }} placeholder="Dietary restrictions" className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                      <label className="flex items-center gap-2 px-3 py-2 text-sm font-body font-light text-ink-soft">
+                        <input type="checkbox" checked={m.isChild} onChange={(e) => { const arr = [...newMembers]; arr[i] = { ...arr[i], isChild: e.target.checked }; setNewMembers(arr); }} />
+                        Child
+                      </label>
+                      {newMembers.length > 1 && (
+                        <button onClick={() => setNewMembers(newMembers.filter((_, j) => j !== i))} className="text-red-400 text-xs hover:text-red-600 px-3 py-2">Remove</button>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              )}
+                <button
+                  onClick={() => setNewMembers([...newMembers, { firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false }])}
+                  className="mt-2 text-gold text-xs font-body tracking-[1px] uppercase hover:underline"
+                >
+                  + Add another member
+                </button>
+              </div>
 
               {addError && (
                 <p className="font-body text-xs text-red-500">{addError}</p>
@@ -502,17 +511,17 @@ export default function DashboardClient() {
                 onClick={() => {
                   if (newName.trim()) {
                     setAddError("");
-                    addGuest(newName.trim(), parseInt(newSize) || 1, newPartyNames);
+                    addGuest(newName.trim(), newMembers.filter((m) => m.firstName || m.lastName), newSide);
                     setNewName("");
-                    setNewSize("1");
-                    setNewPartyNames([""]);
+                    setNewSide("");
+                    setNewMembers([{ firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false }]);
                   } else {
                     setAddError("Enter a household name");
                   }
                 }}
                 className="px-6 py-2 bg-gold text-white font-body text-[11px] tracking-[2px] uppercase hover:bg-gold-light transition-colors"
               >
-                Add Guest
+                Add Household
               </button>
             </div>
 
@@ -551,8 +560,8 @@ export default function DashboardClient() {
                     >
                       <td className="px-4 py-3">
                         <p className="font-medium text-ink">{g.name}</p>
-                        {g.partyNames && Array.isArray(g.partyNames) && g.partyNames.length > 0 && (
-                          <p className="text-xs text-ink-soft">{(g.partyNames as string[]).filter(Boolean).join(", ")}</p>
+                        {g.members && g.members.length > 0 && (
+                          <p className="text-xs text-ink-soft">{g.members.map((m: Member) => `${m.firstName} ${m.lastName}`.trim()).filter(Boolean).join(", ")}</p>
                         )}
                         <p className="text-xs text-ink-faint">/{g.slug}</p>
                       </td>

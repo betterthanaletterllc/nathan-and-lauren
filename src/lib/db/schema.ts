@@ -12,11 +12,11 @@ import {
 export const guests = pgTable("guests", {
   id: serial("id").primaryKey(),
   slug: varchar("slug", { length: 128 }).notNull().unique(),
-  name: text("name").notNull(),
+  name: text("name").notNull(), // household display name
   partySize: integer("party_size").notNull().default(1),
-  partyNames: jsonb("party_names"), // array of individual names
-  tableNumber: integer("table_number"), // reception table assignment
-  note: text("note"), // per-guest note (overrides global default)
+  tableNumber: integer("table_number"),
+  side: varchar("side", { length: 20 }), // 'bride' | 'groom' | 'both'
+  note: text("note"),
 
   // Address fields
   addressLine1: text("address_line1"),
@@ -35,6 +35,18 @@ export const guests = pgTable("guests", {
 
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const householdMembers = pgTable("household_members", {
+  id: serial("id").primaryKey(),
+  householdId: integer("household_id").references(() => guests.id, { onDelete: "cascade" }).notNull(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  phone: text("phone"),
+  email: text("email"),
+  dietaryRestrictions: text("dietary_restrictions"),
+  isChild: boolean("is_child").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const activityLog = pgTable("activity_log", {
@@ -62,5 +74,7 @@ export const settings = pgTable("settings", {
 
 export type Guest = typeof guests.$inferSelect;
 export type NewGuest = typeof guests.$inferInsert;
+export type HouseholdMember = typeof householdMembers.$inferSelect;
+export type NewHouseholdMember = typeof householdMembers.$inferInsert;
 export type Activity = typeof activityLog.$inferSelect;
 export type Setting = typeof settings.$inferSelect;
