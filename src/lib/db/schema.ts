@@ -14,6 +14,7 @@ export const guests = pgTable("guests", {
   slug: varchar("slug", { length: 128 }).notNull().unique(),
   name: text("name").notNull(),
   partySize: integer("party_size").notNull().default(1),
+  partyNames: jsonb("party_names"), // array of individual names
   note: text("note"), // per-guest note (overrides global default)
 
   // Address fields

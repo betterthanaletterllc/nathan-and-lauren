@@ -1,0 +1,1 @@
+ALTER TABLE guests ADD COLUMN IF NOT EXISTS party_names JSONB;

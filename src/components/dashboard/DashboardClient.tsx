@@ -10,6 +10,7 @@ interface Guest {
   slug: string;
   name: string;
   partySize: number;
+  partyNames: string[] | null;
   note: string | null;
   addressLine1: string | null;
   addressLine2: string | null;
@@ -142,12 +143,17 @@ export default function DashboardClient() {
   }, [guests, filter, sortKey, sortAsc]);
 
   // Actions
-  async function addGuest(name: string, partySize: number) {
-    await fetch("/api/guests", {
+  async function addGuest(name: string, partySize: number, partyNames: string[]) {
+    const res = await fetch("/api/guests", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, partySize }),
+      body: JSON.stringify({ name, partySize, partyNames: partyNames.filter(Boolean) }),
     });
+    if (!res.ok) {
+      const err = await res.json();
+      alert("Error adding guest: " + (err.error || "Unknown error"));
+      return;
+    }
     fetchAll();
   }
 
@@ -240,6 +246,8 @@ export default function DashboardClient() {
   // Add guest form state
   const [newName, setNewName] = useState("");
   const [newSize, setNewSize] = useState("1");
+  const [newPartyNames, setNewPartyNames] = useState<string[]>([""]);
+  const [addError, setAddError] = useState("");
 
   const tabClass = (t: Tab) =>
     `px-4 py-2 text-[11px] tracking-[2px] uppercase font-body transition-colors ${
@@ -414,37 +422,82 @@ export default function DashboardClient() {
             </div>
 
             {/* Add guest form */}
-            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-4 flex flex-wrap gap-3 items-end">
-              <div className="flex-1 min-w-[180px]">
-                <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-1">
-                  Guest name
-                </label>
-                <input
-                  type="text"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="Mike & Sarah Johnson"
-                  className="w-full px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
-                />
+            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-4 space-y-3">
+              <div className="flex flex-wrap gap-3 items-end">
+                <div className="flex-1 min-w-[180px]">
+                  <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-1">
+                    Household / display name
+                  </label>
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder="The Johnsons"
+                    className="w-full px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
+                  />
+                </div>
+                <div className="w-24">
+                  <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-1">
+                    Party size
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="20"
+                    value={newSize}
+                    onChange={(e) => {
+                      const size = parseInt(e.target.value) || 1;
+                      setNewSize(e.target.value);
+                      setNewPartyNames((prev) => {
+                        const arr = [...prev];
+                        while (arr.length < size) arr.push("");
+                        return arr.slice(0, size);
+                      });
+                    }}
+                    className="w-full px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink focus:outline-none focus:border-gold"
+                  />
+                </div>
               </div>
-              <div className="w-24">
-                <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-1">
-                  Party size
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={newSize}
-                  onChange={(e) => setNewSize(e.target.value)}
-                  className="w-full px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink focus:outline-none focus:border-gold"
-                />
-              </div>
+
+              {/* Individual party member names */}
+              {parseInt(newSize) >= 1 && (
+                <div>
+                  <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-2">
+                    Party member names
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {newPartyNames.map((pn, i) => (
+                      <input
+                        key={i}
+                        type="text"
+                        value={pn}
+                        onChange={(e) => {
+                          const arr = [...newPartyNames];
+                          arr[i] = e.target.value;
+                          setNewPartyNames(arr);
+                        }}
+                        placeholder={`Person ${i + 1} full name`}
+                        className="w-full px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {addError && (
+                <p className="font-body text-xs text-red-500">{addError}</p>
+              )}
+
               <button
                 onClick={() => {
                   if (newName.trim()) {
-                    addGuest(newName.trim(), parseInt(newSize) || 1);
+                    setAddError("");
+                    addGuest(newName.trim(), parseInt(newSize) || 1, newPartyNames);
                     setNewName("");
                     setNewSize("1");
+                    setNewPartyNames([""]);
+                  } else {
+                    setAddError("Enter a household name");
                   }
                 }}
                 className="px-6 py-2 bg-gold text-white font-body text-[11px] tracking-[2px] uppercase hover:bg-gold-light transition-colors"
@@ -487,6 +540,9 @@ export default function DashboardClient() {
                     >
                       <td className="px-4 py-3">
                         <p className="font-medium text-ink">{g.name}</p>
+                        {g.partyNames && Array.isArray(g.partyNames) && g.partyNames.length > 0 && (
+                          <p className="text-xs text-ink-soft">{(g.partyNames as string[]).filter(Boolean).join(", ")}</p>
+                        )}
                         <p className="text-xs text-ink-faint">/{g.slug}</p>
                       </td>
                       <td className="px-4 py-3 text-ink-soft">{g.partySize}</td>
