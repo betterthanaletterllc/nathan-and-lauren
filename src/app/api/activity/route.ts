@@ -7,24 +7,29 @@ import { desc, eq } from "drizzle-orm";
 
 // GET /api/activity — recent activity feed
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json([]);
+    }
+
+    const activities = await db
+      .select({
+        id: activityLog.id,
+        action: activityLog.action,
+        metadata: activityLog.metadata,
+        createdAt: activityLog.createdAt,
+        guestName: guests.name,
+        guestSlug: guests.slug,
+      })
+      .from(activityLog)
+      .leftJoin(guests, eq(activityLog.guestId, guests.id))
+      .orderBy(desc(activityLog.createdAt))
+      .limit(100);
+
+    return NextResponse.json(activities);
+  } catch (err: any) {
+    console.error("GET /api/activity error:", err);
+    return NextResponse.json([]);
   }
-
-  const activities = await db
-    .select({
-      id: activityLog.id,
-      action: activityLog.action,
-      metadata: activityLog.metadata,
-      createdAt: activityLog.createdAt,
-      guestName: guests.name,
-      guestSlug: guests.slug,
-    })
-    .from(activityLog)
-    .leftJoin(guests, eq(activityLog.guestId, guests.id))
-    .orderBy(desc(activityLog.createdAt))
-    .limit(100);
-
-  return NextResponse.json(activities);
 }

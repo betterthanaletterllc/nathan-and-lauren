@@ -62,9 +62,14 @@ export default function DashboardClient() {
         fetch("/api/activity"),
         fetch("/api/settings"),
       ]);
-      setGuests(await gRes.json());
-      setActivities(await aRes.json());
-      setSettings(await sRes.json());
+      const gData = gRes.ok ? await gRes.json() : [];
+      const aData = aRes.ok ? await aRes.json() : [];
+      const sData = sRes.ok ? await sRes.json() : {};
+      setGuests(Array.isArray(gData) ? gData : []);
+      setActivities(Array.isArray(aData) ? aData : []);
+      setSettings(typeof sData === "object" && !Array.isArray(sData) ? sData : {});
+    } catch (err) {
+      console.error("fetchAll error:", err);
     } finally {
       setLoading(false);
     }
