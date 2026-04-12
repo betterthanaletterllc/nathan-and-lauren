@@ -47,7 +47,7 @@ interface Activity {
   guestSlug: string | null;
 }
 
-type Tab = "overview" | "guests" | "nudge" | "activity" | "settings";
+type Tab = "overview" | "guests" | "nudge" | "activity" | "map" | "settings";
 
 export default function DashboardClient() {
   const [guests, setGuests] = useState<Guest[]>([]);
@@ -315,6 +315,7 @@ export default function DashboardClient() {
             ["guests", "Guest List"],
             ["nudge", "Nudge List"],
             ["activity", "Activity"],
+            ["map", "Guest Map"],
             ["settings", "Settings"],
           ] as [Tab, string][]
         ).map(([t, label]) => (
@@ -715,6 +716,92 @@ export default function DashboardClient() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* GUEST MAP TAB */}
+        {tab === "map" && (
+          <div className="space-y-6">
+            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+              <p className="font-body font-light text-[10px] tracking-[3px] uppercase text-ink-faint mb-4">
+                Guest locations
+              </p>
+              {(() => {
+                const withAddress = guests.filter((g) => g.city && g.state);
+                if (withAddress.length === 0) {
+                  return (
+                    <p className="text-center py-8 text-ink-faint text-sm">
+                      No addresses submitted yet. Locations will appear here as guests submit their addresses.
+                    </p>
+                  );
+                }
+
+                // Group by state, then city
+                const byState: Record<string, { city: string; guests: typeof withAddress }[]> = {};
+                for (const g of withAddress) {
+                  const state = g.state || "Unknown";
+                  const city = g.city || "Unknown";
+                  if (!byState[state]) byState[state] = [];
+                  const existing = byState[state].find((c) => c.city === city);
+                  if (existing) {
+                    existing.guests.push(g);
+                  } else {
+                    byState[state].push({ city, guests: [g] });
+                  }
+                }
+
+                const sortedStates = Object.entries(byState).sort(
+                  (a, b) => b[1].reduce((s, c) => s + c.guests.length, 0) - a[1].reduce((s, c) => s + c.guests.length, 0)
+                );
+
+                return (
+                  <div className="space-y-4">
+                    {/* Summary */}
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      <div className="bg-sand p-4 text-center">
+                        <p className="font-display text-2xl text-ink">{withAddress.length}</p>
+                        <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">Addresses in</p>
+                      </div>
+                      <div className="bg-sand p-4 text-center">
+                        <p className="font-display text-2xl text-ink">{Object.keys(byState).length}</p>
+                        <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">States</p>
+                      </div>
+                      <div className="bg-sand p-4 text-center">
+                        <p className="font-display text-2xl text-ink">{sortedStates.reduce((s, [, cities]) => s + cities.length, 0)}</p>
+                        <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">Cities</p>
+                      </div>
+                    </div>
+
+                    {/* By state */}
+                    {sortedStates.map(([state, cities]) => {
+                      const stateTotal = cities.reduce((s, c) => s + c.guests.length, 0);
+                      return (
+                        <div key={state} className="border-b border-sand-dark pb-3 last:border-0">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="font-body text-sm font-medium text-ink">{state}</p>
+                            <span className="font-body text-xs text-ink-faint">
+                              {stateTotal} household{stateTotal !== 1 ? "s" : ""}
+                            </span>
+                          </div>
+                          {cities
+                            .sort((a, b) => b.guests.length - a.guests.length)
+                            .map(({ city, guests: cityGuests }) => (
+                              <div key={city} className="ml-4 flex items-center justify-between py-1">
+                                <p className="font-body text-sm text-ink-soft">{city}</p>
+                                <div className="flex items-center gap-3">
+                                  <span className="font-body text-xs text-ink-faint">
+                                    {cityGuests.map((g) => g.name).join(", ")}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
           </div>
         )}
 

@@ -5,6 +5,10 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import GuestPageClient from "@/components/guest/GuestPageClient";
 
+// Never cache — always fetch fresh settings/guest data
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 interface Props {
   params: { slug: string };
 }
