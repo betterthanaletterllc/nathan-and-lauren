@@ -57,6 +57,10 @@ export default async function GuestPage({ params }: Props) {
   const phase = config["guest_page_phase"] || "save_the_date";
   const videoUrl = guest.videoUrl || config["global_video_url"] || "";
   const roomBlockLink = config["room_block_link"] || "";
+  const destinationAirport = config["destination_airport"] || "CUN";
+  const travelDateStart = config["travel_date_start"] || "2027-02-25";
+  const travelDateEnd = config["travel_date_end"] || "2027-02-28";
+  const foodOptions = (config["food_options"] || "Salmon,Chicken Fettuccine").split(",").map((s) => s.trim()).filter(Boolean);
 
   // Fetch household members
   const members = await db
@@ -96,11 +100,19 @@ export default async function GuestPage({ params }: Props) {
         foodAllergies: m.foodAllergies,
         isChild: m.isChild,
         isPlusOne: m.isPlusOne,
+        passportConfirmed: m.passportConfirmed,
+        flightsBooked: m.flightsBooked,
+        flightDetails: m.flightDetails,
+        hotelBooked: m.hotelBooked,
       }))}
       note={note}
       phase={phase}
       videoUrl={videoUrl}
       roomBlockLink={roomBlockLink}
+      destinationAirport={destinationAirport}
+      travelDateStart={travelDateStart}
+      travelDateEnd={travelDateEnd}
+      foodOptions={foodOptions}
     />
   );
 }

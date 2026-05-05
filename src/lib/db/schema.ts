@@ -78,6 +78,12 @@ export const householdMembers = pgTable("household_members", {
   attendingReception: boolean("attending_reception"),
   attendingBrunch: boolean("attending_brunch"),
 
+  // Per-person travel checklist
+  passportConfirmed: boolean("passport_confirmed").notNull().default(false),
+  flightsBooked: boolean("flights_booked").notNull().default(false),
+  flightDetails: text("flight_details"),
+  hotelBooked: boolean("hotel_booked").notNull().default(false),
+
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

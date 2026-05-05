@@ -972,14 +972,65 @@ export default function DashboardClient() {
               <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block mb-2">
                 Room block booking link
               </label>
-              <p className="font-body text-xs text-ink-faint mb-3">
-                Link shown to guests during the checklist phase for booking rooms.
-              </p>
               <input
                 type="text"
                 defaultValue={settings["room_block_link"] || ""}
                 onBlur={(e) => saveSetting("room_block_link", e.target.value)}
                 placeholder="https://..."
+                className="w-full px-4 py-3 bg-white border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
+              />
+            </div>
+
+            {/* Travel settings */}
+            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6 space-y-4">
+              <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block">
+                Travel settings
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="font-body text-[10px] tracking-[1px] uppercase text-ink-faint block mb-1">Destination airport code</label>
+                  <input
+                    type="text"
+                    defaultValue={settings["destination_airport"] || "CUN"}
+                    onBlur={(e) => saveSetting("destination_airport", e.target.value.toUpperCase())}
+                    placeholder="CUN"
+                    className="w-full px-3 py-2 bg-white border border-gold-pale text-sm font-body font-light text-ink focus:outline-none focus:border-gold"
+                  />
+                </div>
+                <div>
+                  <label className="font-body text-[10px] tracking-[1px] uppercase text-ink-faint block mb-1">Travel start date</label>
+                  <input
+                    type="date"
+                    defaultValue={settings["travel_date_start"] || "2027-02-25"}
+                    onBlur={(e) => saveSetting("travel_date_start", e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-gold-pale text-sm font-body font-light text-ink focus:outline-none focus:border-gold"
+                  />
+                </div>
+                <div>
+                  <label className="font-body text-[10px] tracking-[1px] uppercase text-ink-faint block mb-1">Travel end date</label>
+                  <input
+                    type="date"
+                    defaultValue={settings["travel_date_end"] || "2027-02-28"}
+                    onBlur={(e) => saveSetting("travel_date_end", e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-gold-pale text-sm font-body font-light text-ink focus:outline-none focus:border-gold"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Food options */}
+            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+              <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block mb-2">
+                Dinner options (RSVP phase)
+              </label>
+              <p className="font-body text-xs text-ink-faint mb-3">
+                Comma-separated list of food choices guests can pick from.
+              </p>
+              <input
+                type="text"
+                defaultValue={settings["food_options"] || "Salmon,Chicken Fettuccine"}
+                onBlur={(e) => saveSetting("food_options", e.target.value)}
+                placeholder="Salmon,Chicken Fettuccine"
                 className="w-full px-4 py-3 bg-white border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
               />
             </div>

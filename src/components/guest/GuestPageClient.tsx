@@ -11,6 +11,10 @@ interface MemberData {
   foodAllergies: string | null;
   isChild: boolean;
   isPlusOne: boolean;
+  passportConfirmed: boolean;
+  flightsBooked: boolean;
+  flightDetails: string | null;
+  hotelBooked: boolean;
 }
 
 interface Props {
@@ -39,9 +43,13 @@ interface Props {
   phase: string;
   videoUrl: string;
   roomBlockLink: string;
+  destinationAirport: string;
+  travelDateStart: string;
+  travelDateEnd: string;
+  foodOptions: string[];
 }
 
-export default function GuestPageClient({ guest, members: initialMembers, note, phase, videoUrl, roomBlockLink }: Props) {
+export default function GuestPageClient({ guest, members: initialMembers, note, phase, videoUrl, roomBlockLink, destinationAirport, travelDateStart, travelDateEnd, foodOptions }: Props) {
   const [submitted, setSubmitted] = useState(guest.addressSubmitted);
   const [submitting, setSubmitting] = useState(false);
   const [rsvpSubmitted, setRsvpSubmitted] = useState(guest.rsvpSubmitted);
@@ -68,12 +76,19 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
   const [showPlusOne, setShowPlusOne] = useState(false);
   const [rsvpSubmitting, setRsvpSubmitting] = useState(false);
 
-  // Checklist state
+  // Checklist state - per person
+  const [memberChecklist, setMemberChecklist] = useState(
+    initialMembers.filter(m => m.rsvpStatus === "coming").map((m) => ({
+      id: m.id,
+      firstName: m.firstName,
+      lastName: m.lastName,
+      passportConfirmed: m.passportConfirmed || false,
+      flightsBooked: m.flightsBooked || false,
+      flightDetails: m.flightDetails || "",
+      hotelBooked: m.hotelBooked || false,
+    }))
+  );
   const [checklist, setChecklist] = useState({
-    passportConfirmed: guest.passportConfirmed,
-    flightsBooked: guest.flightsBooked,
-    flightDetails: guest.flightDetails || "",
-    hotelBooked: guest.hotelBooked,
     hotelInRoomBlock: guest.hotelInRoomBlock ?? true,
     transportNeeded: guest.transportNeeded ?? false,
     arrivalDate: guest.arrivalDate || "",
@@ -83,6 +98,71 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
     messageToCouple: guest.messageToCouple || "",
   });
   const [checklistSubmitting, setChecklistSubmitting] = useState(false);
+
+  // Countdown
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+  const weddingDate = new Date("2027-02-26T00:00:00");
+  const diff = Math.max(0, weddingDate.getTime() - now);
+  const countdown = {
+    days: Math.floor(diff / 86400000),
+    hours: Math.floor((diff / 3600000) % 24),
+    minutes: Math.floor((diff / 60000) % 60),
+    seconds: Math.floor((diff / 1000) % 60),
+  };
+
+  // Geolocation for nearest airport
+  const [userAirport, setUserAirport] = useState("");
+  function findNearestAirport() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      const airports = [
+        { code: "DFW", lat: 32.8998, lng: -97.0403 },
+        { code: "LAX", lat: 33.9425, lng: -118.4081 },
+        { code: "JFK", lat: 40.6413, lng: -73.7781 },
+        { code: "ORD", lat: 41.9742, lng: -87.9073 },
+        { code: "ATL", lat: 33.6407, lng: -84.4277 },
+        { code: "DEN", lat: 39.8561, lng: -104.6737 },
+        { code: "SFO", lat: 37.6213, lng: -122.3790 },
+        { code: "SEA", lat: 47.4502, lng: -122.3088 },
+        { code: "MIA", lat: 25.7959, lng: -80.2870 },
+        { code: "BOS", lat: 42.3656, lng: -71.0096 },
+        { code: "IAH", lat: 29.9902, lng: -95.3368 },
+        { code: "PHX", lat: 33.4373, lng: -112.0078 },
+        { code: "MSP", lat: 44.8848, lng: -93.2223 },
+        { code: "DTW", lat: 42.2124, lng: -83.3534 },
+        { code: "CLT", lat: 35.2140, lng: -80.9431 },
+        { code: "EWR", lat: 40.6895, lng: -74.1745 },
+        { code: "LAS", lat: 36.0840, lng: -115.1537 },
+        { code: "MCO", lat: 28.4312, lng: -81.3081 },
+        { code: "AUS", lat: 30.1975, lng: -97.6664 },
+        { code: "SAT", lat: 29.5337, lng: -98.4698 },
+        { code: "DAL", lat: 32.8471, lng: -96.8518 },
+        { code: "BNA", lat: 36.1263, lng: -86.6774 },
+        { code: "SAN", lat: 32.7338, lng: -117.1933 },
+        { code: "PHL", lat: 39.8744, lng: -75.2424 },
+        { code: "DCA", lat: 38.8512, lng: -77.0402 },
+        { code: "IAD", lat: 38.9531, lng: -77.4565 },
+      ];
+      let nearest = airports[0];
+      let minDist = Infinity;
+      for (const a of airports) {
+        const d = Math.sqrt((lat - a.lat) ** 2 + (lng - a.lng) ** 2);
+        if (d < minDist) { minDist = d; nearest = a; }
+      }
+      setUserAirport(nearest.code);
+    });
+  }
+
+  function getFlightsUrl(origin?: string) {
+    const from = origin || userAirport || "";
+    const q = `Flights${from ? " from " + from : ""} to ${destinationAirport} on ${travelDateStart} return ${travelDateEnd}`;
+    return `https://www.google.com/travel/flights?q=${encodeURIComponent(q)}`;
+  }
 
   // Track open on mount
   useEffect(() => {
@@ -152,7 +232,11 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
       const res = await fetch("/api/checklist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: guest.slug, ...checklist }),
+        body: JSON.stringify({
+          slug: guest.slug,
+          ...checklist,
+          memberChecklist: memberChecklist,
+        }),
       });
       if (res.ok) setChecklistSubmitted(true);
     } finally {
@@ -500,7 +584,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                           <div>
                             <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint mb-1">Dinner selection</p>
                             <div className="flex gap-2">
-                              {[["salmon", "Salmon"], ["chicken_fettuccine", "Chicken Fettuccine"]].map(([val, label]) => (
+                              {foodOptions.map((opt) => [opt.toLowerCase().replace(/\s+/g, "_"), opt]).map(([val, label]) => (
                                 <button
                                   key={val}
                                   onClick={() => {
@@ -553,7 +637,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                           <div>
                             <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint mb-1">Dinner selection</p>
                             <div className="flex gap-2">
-                              {[["salmon", "Salmon"], ["chicken_fettuccine", "Chicken Fettuccine"]].map(([val, label]) => (
+                              {foodOptions.map((opt) => [opt.toLowerCase().replace(/\s+/g, "_"), opt]).map(([val, label]) => (
                                 <button key={val} onClick={() => setPlusOne({ ...plusOne, foodChoice: val })} className={`flex-1 py-2 text-xs font-body tracking-[1px] uppercase transition-colors ${plusOne.foodChoice === val ? "bg-gold text-white" : "border border-gold-pale text-ink-soft hover:border-gold"}`}>
                                   {label}
                                 </button>
@@ -581,7 +665,34 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
           {/* Travel Checklist */}
           {(phase === "checklist" || phase === "final") && rsvpSubmitted && rsvpMembers.some((m) => m.rsvpStatus === "coming") && (
             <div className="mt-8 animate-fadeUp animation-delay-700">
-              <div className="w-10 h-px bg-gold mx-auto mb-8" />
+              <div className="w-10 h-px bg-gold mx-auto mb-6" />
+
+              {/* Countdown */}
+              <div className="mb-8 text-center">
+                <p className="font-body font-normal text-[10px] tracking-[6px] uppercase text-gold mb-4">
+                  Counting down
+                </p>
+                <div className="flex items-center justify-center gap-2 sm:gap-3">
+                  {[
+                    { value: countdown.days, label: "Days" },
+                    { value: countdown.hours, label: "Hrs" },
+                    { value: countdown.minutes, label: "Min" },
+                    { value: countdown.seconds, label: "Sec" },
+                  ].map(({ value, label }, i) => (
+                    <div key={label} className="flex items-center gap-2 sm:gap-3">
+                      <div className="text-center">
+                        <div className="w-14 sm:w-16 h-14 sm:h-16 border border-gold/40 flex items-center justify-center mb-1">
+                          <span className="font-display text-xl sm:text-2xl text-ink tabular-nums">
+                            {String(value).padStart(2, "0")}
+                          </span>
+                        </div>
+                        <p className="font-body font-light text-[8px] tracking-[2px] uppercase text-ink-faint">{label}</p>
+                      </div>
+                      {i < 3 && <span className="font-display text-sm text-gold/30 mb-4">:</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
 
               {checklistSubmitted ? (
                 <div className="py-4">
@@ -598,56 +709,87 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                     Travel checklist
                   </p>
 
-                  {/* Hotel */}
-                  <div className="border border-gold-pale/40 p-4 space-y-3">
-                    <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">Hotel</p>
-                    {roomBlockLink && (
-                      <a href={roomBlockLink} target="_blank" rel="noopener" className="block py-2.5 text-center bg-gold text-white font-body text-[11px] tracking-[2px] uppercase hover:bg-gold-light transition-colors">
-                        Book Your Room
-                      </a>
-                    )}
-                    <label className="flex items-center gap-2 font-body text-sm text-ink">
-                      <input type="checkbox" checked={checklist.hotelBooked} onChange={(e) => setChecklist({ ...checklist, hotelBooked: e.target.checked })} />
-                      I have booked my hotel
-                    </label>
-                    {checklist.hotelBooked && (
-                      <label className="flex items-center gap-2 font-body text-xs text-ink-soft ml-6">
-                        <input type="checkbox" checked={!checklist.hotelInRoomBlock} onChange={(e) => setChecklist({ ...checklist, hotelInRoomBlock: !e.target.checked })} />
-                        I booked outside the room block
+                  {/* Book Hotel Button */}
+                  {roomBlockLink && (
+                    <a href={roomBlockLink} target="_blank" rel="noopener" className="block py-3.5 text-center bg-gold text-white font-body font-normal text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors">
+                      Book Hotel Room
+                    </a>
+                  )}
+
+                  {/* Book Flights Button */}
+                  <button
+                    onClick={() => {
+                      if (!userAirport) {
+                        findNearestAirport();
+                        // Open with no origin for now, geolocation will update
+                        window.open(getFlightsUrl(), "_blank");
+                      } else {
+                        window.open(getFlightsUrl(), "_blank");
+                      }
+                    }}
+                    className="w-full py-3.5 text-center border-2 border-gold text-gold font-body font-normal text-[13px] tracking-[3px] uppercase hover:bg-gold hover:text-white transition-colors"
+                  >
+                    Search Flights
+                  </button>
+
+                  {/* Per-person checklist */}
+                  {memberChecklist.map((m, i) => (
+                    <div key={m.id} className="border border-gold-pale/40 p-4 space-y-3">
+                      <p className="font-body font-medium text-sm text-ink">{m.firstName} {m.lastName}</p>
+
+                      <label className="flex items-center gap-2 font-body text-sm text-ink">
+                        <input type="checkbox" checked={m.passportConfirmed} onChange={(e) => {
+                          const arr = [...memberChecklist]; arr[i] = { ...arr[i], passportConfirmed: e.target.checked }; setMemberChecklist(arr);
+                        }} />
+                        Valid passport (expires after April 2027)
                       </label>
-                    )}
-                  </div>
 
-                  {/* Passport */}
-                  <div className="border border-gold-pale/40 p-4">
-                    <label className="flex items-center gap-2 font-body text-sm text-ink">
-                      <input type="checkbox" checked={checklist.passportConfirmed} onChange={(e) => setChecklist({ ...checklist, passportConfirmed: e.target.checked })} />
-                      I have a valid passport (expires after April 2027)
-                    </label>
-                  </div>
+                      <label className="flex items-center gap-2 font-body text-sm text-ink">
+                        <input type="checkbox" checked={m.flightsBooked} onChange={(e) => {
+                          const arr = [...memberChecklist]; arr[i] = { ...arr[i], flightsBooked: e.target.checked }; setMemberChecklist(arr);
+                        }} />
+                        Flights booked
+                      </label>
+                      {m.flightsBooked && (
+                        <input type="text" value={m.flightDetails} onChange={(e) => {
+                          const arr = [...memberChecklist]; arr[i] = { ...arr[i], flightDetails: e.target.value }; setMemberChecklist(arr);
+                        }} placeholder="Flight number(s) and dates" className={inputClass} />
+                      )}
 
-                  {/* Flights */}
-                  <div className="border border-gold-pale/40 p-4 space-y-3">
-                    <label className="flex items-center gap-2 font-body text-sm text-ink">
-                      <input type="checkbox" checked={checklist.flightsBooked} onChange={(e) => setChecklist({ ...checklist, flightsBooked: e.target.checked })} />
-                      I have booked my flights
-                    </label>
-                    {checklist.flightsBooked && (
-                      <input type="text" value={checklist.flightDetails} onChange={(e) => setChecklist({ ...checklist, flightDetails: e.target.value })} placeholder="Flight number(s) and dates" className={inputClass} />
-                    )}
-                  </div>
-
-                  {/* Dates & Transport */}
-                  <div className="border border-gold-pale/40 p-4 space-y-3">
-                    <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">Travel dates</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <input type="date" value={checklist.arrivalDate} onChange={(e) => setChecklist({ ...checklist, arrivalDate: e.target.value })} className={inputClass} />
-                      <input type="date" value={checklist.departureDate} onChange={(e) => setChecklist({ ...checklist, departureDate: e.target.value })} className={inputClass} />
+                      <label className="flex items-center gap-2 font-body text-sm text-ink">
+                        <input type="checkbox" checked={m.hotelBooked} onChange={(e) => {
+                          const arr = [...memberChecklist]; arr[i] = { ...arr[i], hotelBooked: e.target.checked }; setMemberChecklist(arr);
+                        }} />
+                        Hotel booked
+                      </label>
                     </div>
+                  ))}
+
+                  {/* Household-level checklist */}
+                  <div className="border border-gold-pale/40 p-4 space-y-3">
+                    <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">Household details</p>
+
+                    <label className="flex items-center gap-2 font-body text-xs text-ink-soft">
+                      <input type="checkbox" checked={!checklist.hotelInRoomBlock} onChange={(e) => setChecklist({ ...checklist, hotelInRoomBlock: !e.target.checked })} />
+                      We booked outside the room block
+                    </label>
+
                     <label className="flex items-center gap-2 font-body text-sm text-ink">
                       <input type="checkbox" checked={checklist.transportNeeded} onChange={(e) => setChecklist({ ...checklist, transportNeeded: e.target.checked })} />
-                      I need airport transportation
+                      We need airport transportation
                     </label>
+
+                    <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint mt-2">Travel dates</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-body text-[9px] uppercase text-ink-faint">Arrival</label>
+                        <input type="date" value={checklist.arrivalDate} onChange={(e) => setChecklist({ ...checklist, arrivalDate: e.target.value })} className={inputClass} />
+                      </div>
+                      <div>
+                        <label className="font-body text-[9px] uppercase text-ink-faint">Departure</label>
+                        <input type="date" value={checklist.departureDate} onChange={(e) => setChecklist({ ...checklist, departureDate: e.target.value })} className={inputClass} />
+                      </div>
+                    </div>
                   </div>
 
                   {/* Emergency contact */}

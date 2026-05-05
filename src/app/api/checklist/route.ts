@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { guests, activityLog } from "@/lib/db/schema";
+import { guests, householdMembers, activityLog } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 // POST /api/checklist — guest submits travel checklist
@@ -10,10 +10,6 @@ export async function POST(req: NextRequest) {
   try {
     const {
       slug,
-      passportConfirmed,
-      flightsBooked,
-      flightDetails,
-      hotelBooked,
       hotelInRoomBlock,
       transportNeeded,
       arrivalDate,
@@ -21,6 +17,7 @@ export async function POST(req: NextRequest) {
       emergencyContact,
       songRequest,
       messageToCouple,
+      memberChecklist,
     } = await req.json();
 
     if (!slug) {
@@ -37,13 +34,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Household not found" }, { status: 404 });
     }
 
+    // Update household-level fields
     await db
       .update(guests)
       .set({
-        passportConfirmed: passportConfirmed ?? false,
-        flightsBooked: flightsBooked ?? false,
-        flightDetails: flightDetails || null,
-        hotelBooked: hotelBooked ?? false,
         hotelInRoomBlock: hotelInRoomBlock ?? null,
         transportNeeded: transportNeeded ?? null,
         arrivalDate: arrivalDate || null,
@@ -56,10 +50,27 @@ export async function POST(req: NextRequest) {
       })
       .where(eq(guests.id, household.id));
 
+    // Update per-member checklist
+    if (memberChecklist && Array.isArray(memberChecklist)) {
+      for (const mc of memberChecklist) {
+        if (mc.id) {
+          await db
+            .update(householdMembers)
+            .set({
+              passportConfirmed: mc.passportConfirmed ?? false,
+              flightsBooked: mc.flightsBooked ?? false,
+              flightDetails: mc.flightDetails || null,
+              hotelBooked: mc.hotelBooked ?? false,
+            })
+            .where(eq(householdMembers.id, mc.id));
+        }
+      }
+    }
+
     await db.insert(activityLog).values({
       guestId: household.id,
       action: "checklist_submitted",
-      metadata: { passportConfirmed, flightsBooked, hotelBooked },
+      metadata: { memberChecklist: memberChecklist?.length || 0 },
     });
 
     return NextResponse.json({ success: true });
