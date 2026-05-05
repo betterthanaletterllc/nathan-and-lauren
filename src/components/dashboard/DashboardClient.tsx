@@ -114,18 +114,6 @@ export default function DashboardClient() {
     fetchAll();
   }, [fetchAll]);
 
-  // Warn before leaving with unsaved settings
-  useEffect(() => {
-    function handleBeforeUnload(e: BeforeUnloadEvent) {
-      if (settingsDirty) {
-        e.preventDefault();
-        e.returnValue = "";
-      }
-    }
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [settingsDirty]);
-
   // Summary stats
   const stats = useMemo(() => {
     const total = guests.length;
@@ -289,6 +277,18 @@ export default function DashboardClient() {
       setTab(t);
     }
   }
+
+  // Warn before leaving with unsaved settings
+  useEffect(() => {
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      if (settingsDirty) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [settingsDirty]);
 
   async function handleCSVImport(file: File) {
     Papa.parse(file, {
