@@ -67,7 +67,7 @@ export const settings = pgTable("settings", {
 // 'global_note' — default note shown on all guest pages
 // 'reminder_threshold_days' — days before flagging a guest as needing a nudge
 // 'couple_names' — e.g. "Nathan & Lauren"
-// 'wedding_date' — e.g. "2027-02-27"
+// 'wedding_date' — e.g. "2027-02-26"
 // 'venue_name' — e.g. "Cancún, Mexico"
 // 'venue_detail' — e.g. "All-inclusive resort · details to follow"
 // 'website_url' — e.g. "nathanandlauren.com"

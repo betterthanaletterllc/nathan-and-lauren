@@ -267,6 +267,63 @@ export default function DashboardClient() {
   ]);
   const [addError, setAddError] = useState("");
 
+  // Household detail editor
+  const [editingGuest, setEditingGuest] = useState<Guest | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editSide, setEditSide] = useState("");
+  const [editNote, setEditNote] = useState("");
+  const [editTable, setEditTable] = useState("");
+  const [editMembers, setEditMembers] = useState<Member[]>([]);
+  const [editDirty, setEditDirty] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [pendingClose, setPendingClose] = useState(false);
+
+  function openHousehold(g: Guest) {
+    setEditingGuest(g);
+    setEditName(g.name);
+    setEditSide(g.side || "");
+    setEditNote(g.note || "");
+    setEditTable(g.tableNumber?.toString() || "");
+    setEditMembers(g.members?.length > 0 ? g.members.map((m) => ({ ...m })) : [{ firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false }]);
+    setEditDirty(false);
+    setShowConfirm(false);
+    setPendingClose(false);
+  }
+
+  function tryCloseHousehold() {
+    if (editDirty) {
+      setPendingClose(true);
+      setShowConfirm(true);
+    } else {
+      setEditingGuest(null);
+    }
+  }
+
+  async function saveHousehold() {
+    if (!editingGuest) return;
+    const res = await fetch("/api/guests", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: editingGuest.id,
+        name: editName,
+        side: editSide || null,
+        note: editNote || null,
+        tableNumber: parseInt(editTable) || null,
+        members: editMembers.filter((m) => m.firstName || m.lastName),
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      alert("Error saving: " + (err.error || "Unknown error"));
+      return;
+    }
+    setEditingGuest(null);
+    setEditDirty(false);
+    setShowConfirm(false);
+    fetchAll();
+  }
+
   const tabClass = (t: Tab) =>
     `px-4 py-2 text-[11px] tracking-[2px] uppercase font-body transition-colors ${
       tab === t
@@ -560,7 +617,9 @@ export default function DashboardClient() {
                       className="border-b border-sand-dark last:border-0 hover:bg-sand/50"
                     >
                       <td className="px-4 py-3">
-                        <p className="font-medium text-ink">{g.name}</p>
+                        <button onClick={() => openHousehold(g)} className="text-left hover:text-gold transition-colors">
+                          <p className="font-medium text-ink hover:text-gold">{g.name}</p>
+                        </button>
                         {g.members && g.members.length > 0 && (
                           <p className="text-xs text-ink-soft">{g.members.map((m: Member) => `${m.firstName} ${m.lastName}`.trim()).filter(Boolean).join(", ")}</p>
                         )}
@@ -906,16 +965,171 @@ export default function DashboardClient() {
                 Your CSV should have these columns (only Name is required):
               </p>
               <code className="font-mono text-xs text-ink-soft bg-sand p-3 block">
-                Name, Slug, Party Size, Note
+                Household, Slug, Table, Note, Side, First Name, Last Name, Phone, Email, Dietary Restrictions, Is Child
               </code>
               <p className="font-body text-xs text-ink-faint mt-2">
-                If Slug is blank, it&apos;s auto-generated from the name. Party
-                Size defaults to 1.
+                Each row is one person. Rows with the same Household name are grouped into one household. Slug is auto-generated if blank.
               </p>
             </div>
           </div>
         )}
       </main>
+
+      {/* Household Detail Modal */}
+      {editingGuest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-ink/30" onClick={tryCloseHousehold} />
+          <div className="relative bg-[#FFFDF9] border border-gold-pale/60 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="sticky top-0 bg-[#FFFDF9] border-b border-gold-pale/40 px-6 py-4 flex items-center justify-between z-10">
+              <h2 className="font-display font-light text-xl text-ink">{editingGuest.name}</h2>
+              <button onClick={tryCloseHousehold} className="text-ink-faint hover:text-ink text-xl leading-none">&times;</button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Household info */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-1">Household name</label>
+                  <input type="text" value={editName} onChange={(e) => { setEditName(e.target.value); setEditDirty(true); }} className="w-full px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink focus:outline-none focus:border-gold" />
+                </div>
+                <div>
+                  <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-1">Side</label>
+                  <select value={editSide} onChange={(e) => { setEditSide(e.target.value); setEditDirty(true); }} className="w-full px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink focus:outline-none focus:border-gold bg-white">
+                    <option value="">—</option>
+                    <option value="bride">Bride</option>
+                    <option value="groom">Groom</option>
+                    <option value="both">Both</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-1">Table</label>
+                  <input type="number" min="1" value={editTable} onChange={(e) => { setEditTable(e.target.value); setEditDirty(true); }} placeholder="—" className="w-full px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink focus:outline-none focus:border-gold" />
+                </div>
+                <div>
+                  <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-1">Slug</label>
+                  <p className="px-3 py-2 text-sm font-body font-light text-ink-faint">/{editingGuest.slug}</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-1">Personal note</label>
+                <textarea rows={2} value={editNote} onChange={(e) => { setEditNote(e.target.value); setEditDirty(true); }} placeholder="Uses global note if blank" className="w-full px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold resize-none" />
+              </div>
+
+              {/* Status */}
+              <div className="bg-sand p-4 grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">Link opened</p>
+                  <p className="font-body text-sm text-ink mt-1">{editingGuest.firstOpenedAt ? `Yes (${editingGuest.openCount}×)` : "No"}</p>
+                </div>
+                <div>
+                  <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">Address</p>
+                  <p className="font-body text-sm text-ink mt-1">{editingGuest.addressSubmittedAt ? `${editingGuest.city}, ${editingGuest.state}` : "Not submitted"}</p>
+                </div>
+                <div>
+                  <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">Guest link</p>
+                  <button onClick={() => { navigator.clipboard.writeText(`${baseUrl}/guest/${editingGuest.slug}`); }} className="font-body text-sm text-gold hover:underline mt-1">Copy link</button>
+                </div>
+              </div>
+
+              {/* Members */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint">Members ({editMembers.length})</label>
+                  <button
+                    onClick={() => { setEditMembers([...editMembers, { firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false }]); setEditDirty(true); }}
+                    className="text-gold text-xs font-body tracking-[1px] uppercase hover:underline"
+                  >
+                    + Add member
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {editMembers.map((m, i) => (
+                    <div key={i} className="border border-gold-pale/40 p-3 relative">
+                      <div className="grid grid-cols-2 gap-2 mb-2">
+                        <input type="text" value={m.firstName} onChange={(e) => { const arr = [...editMembers]; arr[i] = { ...arr[i], firstName: e.target.value }; setEditMembers(arr); setEditDirty(true); }} placeholder="First name" className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                        <input type="text" value={m.lastName} onChange={(e) => { const arr = [...editMembers]; arr[i] = { ...arr[i], lastName: e.target.value }; setEditMembers(arr); setEditDirty(true); }} placeholder="Last name" className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 mb-2">
+                        <input type="text" value={m.phone || ""} onChange={(e) => { const arr = [...editMembers]; arr[i] = { ...arr[i], phone: e.target.value }; setEditMembers(arr); setEditDirty(true); }} placeholder="Phone" className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                        <input type="text" value={m.email || ""} onChange={(e) => { const arr = [...editMembers]; arr[i] = { ...arr[i], email: e.target.value }; setEditMembers(arr); setEditDirty(true); }} placeholder="Email" className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <input type="text" value={m.dietaryRestrictions || ""} onChange={(e) => { const arr = [...editMembers]; arr[i] = { ...arr[i], dietaryRestrictions: e.target.value }; setEditMembers(arr); setEditDirty(true); }} placeholder="Dietary restrictions" className="flex-1 px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                        <label className="flex items-center gap-2 text-sm font-body font-light text-ink-soft whitespace-nowrap">
+                          <input type="checkbox" checked={m.isChild} onChange={(e) => { const arr = [...editMembers]; arr[i] = { ...arr[i], isChild: e.target.checked }; setEditMembers(arr); setEditDirty(true); }} />
+                          Child
+                        </label>
+                        {editMembers.length > 1 && (
+                          <button onClick={() => { setEditMembers(editMembers.filter((_, j) => j !== i)); setEditDirty(true); }} className="text-red-400 text-xs hover:text-red-600 whitespace-nowrap">Remove</button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-between pt-4 border-t border-gold-pale/40">
+                <button onClick={tryCloseHousehold} className="font-body text-sm text-ink-faint hover:text-ink transition-colors">Cancel</button>
+                <button
+                  onClick={() => {
+                    if (editDirty) {
+                      setShowConfirm(true);
+                      setPendingClose(false);
+                    }
+                  }}
+                  disabled={!editDirty}
+                  className={`px-6 py-2 font-body text-[11px] tracking-[2px] uppercase transition-colors ${editDirty ? "bg-gold text-white hover:bg-gold-light" : "bg-sand-dark text-ink-faint cursor-not-allowed"}`}
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm dialog */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-ink/40" />
+          <div className="relative bg-[#FFFDF9] border border-gold-pale/60 p-8 max-w-sm w-full text-center">
+            <p className="font-display text-lg text-ink mb-2">
+              {pendingClose ? "Unsaved changes" : "Save changes?"}
+            </p>
+            <p className="font-body text-sm text-ink-soft mb-6">
+              {pendingClose
+                ? "You have unsaved changes. Do you want to save before closing?"
+                : "Are you sure you want to save these changes?"}
+            </p>
+            <div className="flex justify-center gap-3">
+              {pendingClose && (
+                <button
+                  onClick={() => { setShowConfirm(false); setEditingGuest(null); setEditDirty(false); }}
+                  className="px-5 py-2 border border-gold-pale text-ink-soft font-body text-[11px] tracking-[2px] uppercase hover:bg-sand transition-colors"
+                >
+                  Discard
+                </button>
+              )}
+              <button
+                onClick={() => { setShowConfirm(false); if (pendingClose) setEditingGuest(null); }}
+                className="px-5 py-2 border border-gold-pale text-ink-soft font-body text-[11px] tracking-[2px] uppercase hover:bg-sand transition-colors"
+              >
+                {pendingClose ? "Keep editing" : "Cancel"}
+              </button>
+              <button
+                onClick={() => { saveHousehold(); }}
+                className="px-5 py-2 bg-gold text-white font-body text-[11px] tracking-[2px] uppercase hover:bg-gold-light transition-colors"
+              >
+                {pendingClose ? "Save & close" : "Yes, save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -27,7 +27,7 @@ function useCountdown(targetDate: Date) {
 }
 
 export default function LandingPage() {
-  const weddingDate = new Date("2027-02-27T00:00:00");
+  const weddingDate = new Date("2027-02-26T00:00:00");
   const { days, hours, minutes, seconds } = useCountdown(weddingDate);
   const [mounted, setMounted] = useState(false);
 
@@ -72,7 +72,7 @@ export default function LandingPage() {
         {/* Date & Location */}
         <div className="mt-8 mb-10 animate-fadeUp animation-delay-200">
           <p className="font-body font-light text-sm tracking-[4px] uppercase text-ink-soft">
-            February 27, 2027
+            February 26, 2027
           </p>
           <p className="font-display italic text-lg text-ink-soft mt-1">
             Cancún, Mexico
@@ -159,6 +159,14 @@ export default function LandingPage() {
           <span className="w-16 h-px bg-gradient-to-l from-transparent to-gold/60" />
         </div>
       </div>
+
+      {/* Admin login - bottom of page */}
+      <a
+        href="/dashboard"
+        className="absolute bottom-4 left-1/2 -translate-x-1/2 font-body font-light text-[10px] tracking-[2px] uppercase text-ink-faint/30 hover:text-ink-faint transition-colors"
+      >
+        Manage
+      </a>
 
       <style jsx global>{`
         @keyframes fadeUp {

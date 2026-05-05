@@ -83,7 +83,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
           >
             <div style={{ width: 60, height: 1, background: "#C4956A" }} />
             <p style={{ fontSize: 24, color: "#C4956A", fontStyle: "italic" }}>
-              February 27, 2027
+              February 26, 2027
             </p>
             <div style={{ width: 60, height: 1, background: "#C4956A" }} />
           </div>

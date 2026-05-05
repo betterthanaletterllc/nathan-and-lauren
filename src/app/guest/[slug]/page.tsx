@@ -37,10 +37,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return {
     title: `${firstName}, Save the Date! — Nathan & Lauren`,
-    description: `You're invited to celebrate Nathan & Lauren's wedding · February 27, 2027 · Cancún, Mexico`,
+    description: `You're invited to celebrate Nathan & Lauren's wedding · February 26, 2027 · Cancún, Mexico`,
     openGraph: {
       title: `${firstName}, Save the Date!`,
-      description: `Nathan & Lauren are getting married · February 27, 2027 · Cancún, Mexico`,
+      description: `Nathan & Lauren are getting married · February 26, 2027 · Cancún, Mexico`,
       type: "website",
     },
   };

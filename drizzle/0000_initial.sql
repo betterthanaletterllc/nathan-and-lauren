@@ -38,7 +38,7 @@ INSERT INTO settings (key, value) VALUES
   ('global_note', ''),
   ('reminder_threshold_days', '7'),
   ('couple_names', 'Nathan & Lauren'),
-  ('wedding_date', '2027-02-27'),
+  ('wedding_date', '2027-02-26'),
   ('venue_name', 'Cancún, Mexico'),
   ('venue_detail', 'All-inclusive resort · details to follow')
 ON CONFLICT (key) DO NOTHING;

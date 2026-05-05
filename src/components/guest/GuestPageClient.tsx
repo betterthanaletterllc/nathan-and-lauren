@@ -56,7 +56,7 @@ export default function GuestPageClient({ guest, note }: Props) {
       const url =
         "https://calendar.google.com/calendar/render?action=TEMPLATE" +
         "&text=" + encodeURIComponent("Nathan & Lauren's Wedding") +
-        "&dates=20270227/20270228" +
+        "&dates=20270226/20270227" +
         "&details=" + encodeURIComponent("Nathan & Lauren's Wedding\n\nMore details at nathanandlauren.com") +
         "&location=" + encodeURIComponent("Cancún, Mexico");
       window.open(url, "_blank");
@@ -68,8 +68,8 @@ export default function GuestPageClient({ guest, note }: Props) {
         "CALSCALE:GREGORIAN",
         "METHOD:PUBLISH",
         "BEGIN:VEVENT",
-        "DTSTART;VALUE=DATE:20270227",
-        "DTEND;VALUE=DATE:20270228",
+        "DTSTART;VALUE=DATE:20270226",
+        "DTEND;VALUE=DATE:20270227",
         "SUMMARY:Nathan & Lauren's Wedding",
         "DESCRIPTION:Nathan & Lauren's Wedding — Cancún\\, Mexico\\nMore details at nathanandlauren.com",
         "LOCATION:Cancún, Mexico",
@@ -142,7 +142,7 @@ export default function GuestPageClient({ guest, note }: Props) {
               February
             </span>
             <div className="w-[76px] h-[76px] rounded-full border border-gold flex items-center justify-center">
-              <span className="font-display text-[34px] text-ink">27</span>
+              <span className="font-display text-[34px] text-ink">26</span>
             </div>
             <span className="font-body font-light text-[11px] tracking-[3px] uppercase text-ink-soft">
               2027
