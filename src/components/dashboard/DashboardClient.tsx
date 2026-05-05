@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { signOut } from "next-auth/react";
 import Papa from "papaparse";
+import VideoRecorder from "./VideoRecorder";
 
 // Types
 interface Member {
@@ -1135,10 +1136,11 @@ export default function DashboardClient() {
                 </label>
               </div>
 
-              <div>
-                <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-1">Video URL (for RSVP phase)</label>
-                <input type="text" value={editVideo} onChange={(e) => { setEditVideo(e.target.value); setEditDirty(true); }} placeholder="YouTube or video link" className="w-full px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
-              </div>
+              <VideoRecorder
+                slug={editingGuest.slug}
+                currentUrl={editVideo}
+                onVideoSaved={(url) => { setEditVideo(url); setEditDirty(true); }}
+              />
 
               <div>
                 <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-1">Personal note</label>
