@@ -6,14 +6,19 @@ import { authOptions } from "@/lib/auth";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-const s3 = new S3Client({
-  region: "auto",
-  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
-  },
-});
+function getS3Client() {
+  if (!process.env.R2_ACCOUNT_ID || !process.env.R2_ACCESS_KEY_ID || !process.env.R2_SECRET_ACCESS_KEY) {
+    throw new Error("R2 credentials not configured. Set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY in environment variables.");
+  }
+  return new S3Client({
+    region: "auto",
+    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+    credentials: {
+      accessKeyId: process.env.R2_ACCESS_KEY_ID,
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+    },
+  });
+}
 
 // POST /api/upload — generate presigned URL for direct R2 upload
 export async function POST(req: NextRequest) {
@@ -29,7 +34,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "filename and contentType required" }, { status: 400 });
     }
 
-    // Create a unique key: videos/{slug}/{timestamp}-{filename}
+    const s3 = getS3Client();
     const key = `videos/${slug || "general"}/${Date.now()}-${filename.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
 
     const command = new PutObjectCommand({
@@ -38,8 +43,7 @@ export async function POST(req: NextRequest) {
       ContentType: contentType,
     });
 
-    const presignedUrl = await getSignedUrl(s3, command, { expiresIn: 600 }); // 10 min
-
+    const presignedUrl = await getSignedUrl(s3, command, { expiresIn: 600 });
     const publicUrl = `${process.env.R2_PUBLIC_URL}/${key}`;
 
     return NextResponse.json({ presignedUrl, publicUrl, key });

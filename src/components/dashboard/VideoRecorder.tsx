@@ -9,73 +9,16 @@ interface Props {
 }
 
 export default function VideoRecorder({ slug, currentUrl, onVideoSaved }: Props) {
-  const [mode, setMode] = useState<"idle" | "camera" | "uploading" | "recording" | "preview">("idle");
+  const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState("");
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const previewRef = useRef<HTMLVideoElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  async function startCamera() {
-    setError("");
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: true,
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
-      setMode("camera");
-    } catch (err: any) {
-      setError("Camera access denied. Please allow camera permissions.");
-    }
-  }
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  function startRecording() {
-    if (!streamRef.current) return;
-    chunksRef.current = [];
-
-    const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
-      ? "video/webm;codecs=vp9,opus"
-      : "video/webm";
-
-    const recorder = new MediaRecorder(streamRef.current, { mimeType });
-    recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) chunksRef.current.push(e.data);
-    };
-    recorder.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: mimeType });
-      setRecordedBlob(blob);
-      if (previewRef.current) {
-        previewRef.current.src = URL.createObjectURL(blob);
-      }
-      setMode("preview");
-      // Stop camera
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-    };
-    mediaRecorderRef.current = recorder;
-    recorder.start();
-    setMode("recording");
-  }
-
-  function stopRecording() {
-    mediaRecorderRef.current?.stop();
-  }
-
-  function discardRecording() {
-    setRecordedBlob(null);
-    setMode("idle");
-  }
-
-  async function uploadBlob(blob: Blob, filename: string) {
-    setMode("uploading");
+    setUploading(true);
     setProgress(0);
     setError("");
 
@@ -85,8 +28,8 @@ export default function VideoRecorder({ slug, currentUrl, onVideoSaved }: Props)
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          filename,
-          contentType: blob.type || "video/webm",
+          filename: file.name,
+          contentType: file.type || "video/mp4",
           slug,
         }),
       });
@@ -101,7 +44,7 @@ export default function VideoRecorder({ slug, currentUrl, onVideoSaved }: Props)
       // Upload directly to R2
       const xhr = new XMLHttpRequest();
       xhr.open("PUT", presignedUrl);
-      xhr.setRequestHeader("Content-Type", blob.type || "video/webm");
+      xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
 
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {
@@ -114,27 +57,21 @@ export default function VideoRecorder({ slug, currentUrl, onVideoSaved }: Props)
           if (xhr.status >= 200 && xhr.status < 300) {
             resolve();
           } else {
-            reject(new Error(`Upload failed: ${xhr.status}`));
+            reject(new Error(`Upload failed with status ${xhr.status}: ${xhr.responseText}`));
           }
         };
-        xhr.onerror = () => reject(new Error("Upload failed"));
-        xhr.send(blob);
+        xhr.onerror = () => reject(new Error("Upload failed — check R2 CORS settings"));
+        xhr.send(file);
       });
 
       onVideoSaved(publicUrl);
-      setMode("idle");
       setProgress(0);
     } catch (err: any) {
       setError(err.message);
-      setMode("preview");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
     }
-  }
-
-  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    await uploadBlob(file, file.name);
-    e.target.value = "";
   }
 
   return (
@@ -150,96 +87,7 @@ export default function VideoRecorder({ slug, currentUrl, onVideoSaved }: Props)
         )}
       </div>
 
-      {mode === "idle" && (
-        <div className="flex gap-2">
-          <button
-            onClick={startCamera}
-            className="flex-1 py-3 border border-gold-pale text-ink-soft font-body text-[11px] tracking-[2px] uppercase hover:border-gold hover:text-gold transition-colors"
-          >
-            Record video
-          </button>
-          <button
-            onClick={() => fileRef.current?.click()}
-            className="flex-1 py-3 border border-gold-pale text-ink-soft font-body text-[11px] tracking-[2px] uppercase hover:border-gold hover:text-gold transition-colors"
-          >
-            Upload video
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="video/*"
-            className="hidden"
-            onChange={handleFileUpload}
-          />
-        </div>
-      )}
-
-      {(mode === "camera" || mode === "recording") && (
-        <div className="space-y-2">
-          <video
-            ref={videoRef}
-            muted
-            playsInline
-            className="w-full aspect-video bg-ink/5 object-cover"
-          />
-          <div className="flex gap-2">
-            {mode === "camera" && (
-              <>
-                <button
-                  onClick={startRecording}
-                  className="flex-1 py-2 bg-red-500 text-white font-body text-[11px] tracking-[2px] uppercase"
-                >
-                  Start Recording
-                </button>
-                <button
-                  onClick={() => {
-                    streamRef.current?.getTracks().forEach((t) => t.stop());
-                    setMode("idle");
-                  }}
-                  className="px-4 py-2 border border-gold-pale text-ink-faint font-body text-[11px] tracking-[2px] uppercase"
-                >
-                  Cancel
-                </button>
-              </>
-            )}
-            {mode === "recording" && (
-              <button
-                onClick={stopRecording}
-                className="flex-1 py-2 bg-red-600 text-white font-body text-[11px] tracking-[2px] uppercase animate-pulse"
-              >
-                Stop Recording
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {mode === "preview" && recordedBlob && (
-        <div className="space-y-2">
-          <video
-            ref={previewRef}
-            controls
-            playsInline
-            className="w-full aspect-video bg-ink/5 object-cover"
-          />
-          <div className="flex gap-2">
-            <button
-              onClick={() => uploadBlob(recordedBlob, `recording-${slug}.webm`)}
-              className="flex-1 py-2 bg-gold text-white font-body text-[11px] tracking-[2px] uppercase hover:bg-gold-light transition-colors"
-            >
-              Save & Upload
-            </button>
-            <button
-              onClick={discardRecording}
-              className="px-4 py-2 border border-gold-pale text-ink-faint font-body text-[11px] tracking-[2px] uppercase"
-            >
-              Discard
-            </button>
-          </div>
-        </div>
-      )}
-
-      {mode === "uploading" && (
+      {uploading ? (
         <div className="space-y-2">
           <div className="w-full h-2 bg-sand-dark rounded-full overflow-hidden">
             <div
@@ -251,7 +99,22 @@ export default function VideoRecorder({ slug, currentUrl, onVideoSaved }: Props)
             Uploading... {progress}%
           </p>
         </div>
+      ) : (
+        <button
+          onClick={() => fileRef.current?.click()}
+          className="w-full py-3 border border-gold-pale text-ink-soft font-body text-[11px] tracking-[2px] uppercase hover:border-gold hover:text-gold transition-colors"
+        >
+          {currentUrl ? "Replace Video" : "Upload Video"}
+        </button>
       )}
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept="video/*"
+        className="hidden"
+        onChange={handleFileUpload}
+      />
 
       {error && (
         <p className="font-body text-xs text-red-500">{error}</p>
