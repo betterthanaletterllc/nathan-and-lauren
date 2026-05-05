@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Nathan & Lauren — Save the Date",
-  description: "February 26, 2027 · Cancún, Mexico",
+  description: "February 26, 2027 · Dreams Sapphire Resort & Spa · Riviera Cancún",
 };
 
 export default function RootLayout({

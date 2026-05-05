@@ -58,7 +58,7 @@ export default function GuestPageClient({ guest, note }: Props) {
         "&text=" + encodeURIComponent("Nathan & Lauren's Wedding") +
         "&dates=20270226/20270227" +
         "&details=" + encodeURIComponent("Nathan & Lauren's Wedding\n\nMore details at nathanandlauren.com") +
-        "&location=" + encodeURIComponent("Cancún, Mexico");
+        "&location=" + encodeURIComponent("Dreams Sapphire Resort & Spa, Riviera Cancún, Mexico");
       window.open(url, "_blank");
     } else {
       const ics = [
@@ -71,8 +71,8 @@ export default function GuestPageClient({ guest, note }: Props) {
         "DTSTART;VALUE=DATE:20270226",
         "DTEND;VALUE=DATE:20270227",
         "SUMMARY:Nathan & Lauren's Wedding",
-        "DESCRIPTION:Nathan & Lauren's Wedding — Cancún\\, Mexico\\nMore details at nathanandlauren.com",
-        "LOCATION:Cancún, Mexico",
+        "DESCRIPTION:Nathan & Lauren's Wedding — Dreams Sapphire Resort & Spa\\, Riviera Cancún\\, Mexico\\nMore details at nathanandlauren.com",
+        "LOCATION:Dreams Sapphire Resort & Spa, Riviera Cancún, Mexico",
         "STATUS:CONFIRMED",
         "TRANSP:TRANSPARENT",
         "BEGIN:VALARM",
@@ -186,12 +186,19 @@ export default function GuestPageClient({ guest, note }: Props) {
 
           {/* Location */}
           <div className="mb-6 animate-fadeUp animation-delay-500">
-            <p className="font-display italic text-xl text-ink mb-1">
-              Cancún, Mexico
-            </p>
-            <p className="font-body font-light text-[11px] tracking-[3px] uppercase text-ink-faint">
-              All-inclusive resort · details to follow
-            </p>
+            <a
+              href="https://maps.app.goo.gl/zKjtXDLcCCqqwTb57"
+              target="_blank"
+              rel="noopener"
+              className="block group"
+            >
+              <p className="font-display italic text-xl text-ink mb-1 group-hover:text-gold transition-colors">
+                Dreams Sapphire Resort & Spa
+              </p>
+              <p className="font-body font-light text-[11px] tracking-[3px] uppercase text-ink-faint">
+                Riviera Cancún, Mexico
+              </p>
+            </a>
           </div>
 
           {/* Note from couple */}

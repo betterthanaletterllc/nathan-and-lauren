@@ -74,9 +74,19 @@ export default function LandingPage() {
           <p className="font-body font-light text-sm tracking-[4px] uppercase text-ink-soft">
             February 26, 2027
           </p>
-          <p className="font-display italic text-lg text-ink-soft mt-1">
-            Cancún, Mexico
-          </p>
+          <a
+            href="https://maps.app.goo.gl/zKjtXDLcCCqqwTb57"
+            target="_blank"
+            rel="noopener"
+            className="block mt-2 group"
+          >
+            <p className="font-display italic text-lg text-ink-soft group-hover:text-gold transition-colors">
+              Dreams Sapphire Resort & Spa
+            </p>
+            <p className="font-body font-light text-xs tracking-[3px] uppercase text-ink-faint mt-0.5">
+              Riviera Cancún, Mexico
+            </p>
+          </a>
         </div>
 
         {/* Animated waves */}

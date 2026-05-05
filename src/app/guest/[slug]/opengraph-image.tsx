@@ -88,7 +88,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
             <div style={{ width: 60, height: 1, background: "#C4956A" }} />
           </div>
           <p style={{ fontSize: 22, color: "#6B6660", fontStyle: "italic" }}>
-            Cancún, Mexico
+            Riviera Cancún, Mexico
           </p>
         </div>
       </div>
