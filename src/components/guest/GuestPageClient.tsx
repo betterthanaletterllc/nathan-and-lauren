@@ -530,7 +530,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
           {(phase === "rsvp" || phase === "checklist" || phase === "final") && (
             <div className="animate-fadeUp animation-delay-700">
               {/* Video */}
-              {videoUrl && !rsvpSubmitted && (
+              {videoUrl && (
                 <div className="mb-8">
                   <div className="aspect-video w-full">
                     {videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be") ? (
