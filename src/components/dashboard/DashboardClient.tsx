@@ -423,6 +423,8 @@ export default function DashboardClient() {
   const cardClass =
     "bg-[#FFFDF9] border border-gold-pale/40 p-5 text-center";
 
+  const [drilldown, setDrilldown] = useState<string | null>(null);
+
   if (loading) {
     return (
       <div className="min-h-dvh bg-sand flex items-center justify-center">
@@ -490,12 +492,16 @@ export default function DashboardClient() {
                 ["RSVP No", stats.rsvpNo],
                 ["RSVP Pending", stats.rsvpPending],
               ].map(([label, val]) => (
-                <div key={label as string} className={cardClass}>
+                <button
+                  key={label as string}
+                  onClick={() => setDrilldown(drilldown === label ? null : label as string)}
+                  className={`${cardClass} cursor-pointer transition-all hover:border-gold ${drilldown === label ? "border-gold ring-1 ring-gold/20" : ""}`}
+                >
                   <p className="font-body font-light text-[10px] tracking-[3px] uppercase text-ink-faint mb-1">
                     {label}
                   </p>
                   <p className="font-display text-3xl text-ink">{val}</p>
-                </div>
+                </button>
               ))}
             </div>
 
@@ -507,14 +513,91 @@ export default function DashboardClient() {
                 ["Flights", `${stats.flights}/${stats.total}`],
                 ["Hotels", `${stats.hotels}/${stats.total}`],
               ].map(([label, val]) => (
-                <div key={label as string} className={cardClass}>
+                <button
+                  key={label as string}
+                  onClick={() => setDrilldown(drilldown === label ? null : label as string)}
+                  className={`${cardClass} cursor-pointer transition-all hover:border-gold ${drilldown === label ? "border-gold ring-1 ring-gold/20" : ""}`}
+                >
                   <p className="font-body font-light text-[10px] tracking-[3px] uppercase text-ink-faint mb-1">
                     {label}
                   </p>
                   <p className="font-display text-2xl text-ink">{val}</p>
-                </div>
+                </button>
               ))}
             </div>
+
+            {/* Drilldown panel */}
+            {drilldown && (
+              <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="font-body font-light text-[10px] tracking-[3px] uppercase text-ink-faint">
+                    {drilldown}
+                  </p>
+                  <button onClick={() => setDrilldown(null)} className="text-ink-faint hover:text-ink text-sm">&times;</button>
+                </div>
+                <div className="space-y-0">
+                  {(() => {
+                    let filtered: { household: string; slug: string; names: string; detail?: string }[] = [];
+
+                    switch (drilldown) {
+                      case "Households":
+                        filtered = guests.map((g) => ({ household: g.name, slug: g.slug, names: g.members?.map((m: Member) => `${m.firstName} ${m.lastName}`.trim()).join(", ") || "" }));
+                        break;
+                      case "Headcount":
+                        filtered = guests.flatMap((g) => (g.members || []).map((m: Member) => ({ household: g.name, slug: g.slug, names: `${m.firstName} ${m.lastName}`.trim(), detail: m.isChild ? "Child" : "Adult" })));
+                        break;
+                      case "Kids":
+                        filtered = guests.flatMap((g) => (g.members || []).filter((m: Member) => m.isChild).map((m: Member) => ({ household: g.name, slug: g.slug, names: `${m.firstName} ${m.lastName}`.trim() })));
+                        break;
+                      case "RSVP Yes":
+                        filtered = guests.flatMap((g) => (g.members || []).filter((m: Member) => m.rsvpStatus === "coming").map((m: Member) => ({ household: g.name, slug: g.slug, names: `${m.firstName} ${m.lastName}`.trim(), detail: m.foodChoice || "No food selected" })));
+                        break;
+                      case "RSVP No":
+                        filtered = guests.flatMap((g) => (g.members || []).filter((m: Member) => m.rsvpStatus === "not_coming").map((m: Member) => ({ household: g.name, slug: g.slug, names: `${m.firstName} ${m.lastName}`.trim() })));
+                        break;
+                      case "RSVP Pending":
+                        filtered = guests.flatMap((g) => (g.members || []).filter((m: Member) => !m.rsvpStatus).map((m: Member) => ({ household: g.name, slug: g.slug, names: `${m.firstName} ${m.lastName}`.trim() })));
+                        if (filtered.length === 0) {
+                          filtered = guests.filter((g) => !g.rsvpSubmittedAt).map((g) => ({ household: g.name, slug: g.slug, names: g.members?.map((m: Member) => `${m.firstName} ${m.lastName}`.trim()).join(", ") || "No members" }));
+                        }
+                        break;
+                      case "Addresses In":
+                        filtered = guests.filter((g) => g.addressSubmittedAt).map((g) => ({ household: g.name, slug: g.slug, names: `${g.city}, ${g.state}` }));
+                        break;
+                      case "Passports":
+                        filtered = guests.filter((g) => g.passportConfirmed).map((g) => ({ household: g.name, slug: g.slug, names: "Confirmed" }));
+                        break;
+                      case "Flights":
+                        filtered = guests.filter((g) => g.flightsBooked).map((g) => ({ household: g.name, slug: g.slug, names: g.flightDetails || "Booked" }));
+                        break;
+                      case "Hotels":
+                        filtered = guests.filter((g) => g.hotelBooked).map((g) => ({ household: g.name, slug: g.slug, names: g.hotelInRoomBlock === false ? "Outside room block" : "Room block" }));
+                        break;
+                    }
+
+                    if (filtered.length === 0) {
+                      return <p className="text-ink-faint text-sm text-center py-4">No results</p>;
+                    }
+
+                    return filtered.map((r, i) => (
+                      <div key={i} className="flex items-center justify-between py-2.5 border-b border-sand-dark last:border-0">
+                        <div>
+                          <button onClick={() => { const g = guests.find((g) => g.slug === r.slug); if (g) openHousehold(g); }} className="font-body text-sm font-medium text-ink hover:text-gold transition-colors">
+                            {r.names || r.household}
+                          </button>
+                          {r.names && r.names !== r.household && (
+                            <p className="font-body text-xs text-ink-faint">{r.household}</p>
+                          )}
+                        </div>
+                        {r.detail && (
+                          <span className="font-body text-xs text-ink-faint">{r.detail}</span>
+                        )}
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+            )}
 
             {/* Quick progress */}
             <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
