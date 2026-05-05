@@ -114,6 +114,18 @@ export default function DashboardClient() {
     fetchAll();
   }, [fetchAll]);
 
+  // Warn before leaving with unsaved settings
+  useEffect(() => {
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      if (settingsDirty) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [settingsDirty]);
+
   // Summary stats
   const stats = useMemo(() => {
     const total = guests.length;
@@ -234,6 +246,48 @@ export default function DashboardClient() {
       body: JSON.stringify({ key, value }),
     });
     setSettings((s) => ({ ...s, [key]: value }));
+  }
+
+  // Settings page state - batch changes with explicit save
+  const [pendingSettings, setPendingSettings] = useState<Record<string, string>>({});
+  const [settingsDirty, setSettingsDirty] = useState(false);
+  const [showSettingsConfirm, setShowSettingsConfirm] = useState(false);
+  const [pendingTab, setPendingTab] = useState<Tab | null>(null);
+
+  function updatePending(key: string, value: string) {
+    setPendingSettings((p) => ({ ...p, [key]: value }));
+    setSettingsDirty(true);
+  }
+
+  function getSettingValue(key: string, fallback: string = "") {
+    return key in pendingSettings ? pendingSettings[key] : (settings[key] || fallback);
+  }
+
+  async function saveAllSettings() {
+    for (const [key, value] of Object.entries(pendingSettings)) {
+      await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, value }),
+      });
+    }
+    setSettings((s) => ({ ...s, ...pendingSettings }));
+    setPendingSettings({});
+    setSettingsDirty(false);
+  }
+
+  function discardSettings() {
+    setPendingSettings({});
+    setSettingsDirty(false);
+  }
+
+  function handleTabSwitch(t: Tab) {
+    if (settingsDirty && tab === "settings" && t !== "settings") {
+      setPendingTab(t);
+      setShowSettingsConfirm(true);
+    } else {
+      setTab(t);
+    }
   }
 
   async function handleCSVImport(file: File) {
@@ -411,7 +465,7 @@ export default function DashboardClient() {
             ["settings", "Settings"],
           ] as [Tab, string][]
         ).map(([t, label]) => (
-          <button key={t} onClick={() => setTab(t)} className={tabClass(t)}>
+          <button key={t} onClick={() => handleTabSwitch(t)} className={tabClass(t)}>
             {label}
             {t === "nudge" && nudgeGuests.filter((g) => g.daysSince >= threshold).length > 0 && (
               <span className="ml-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full bg-gold text-white text-[9px]">
@@ -937,9 +991,9 @@ export default function DashboardClient() {
                 ].map(([val, label]) => (
                   <button
                     key={val}
-                    onClick={() => saveSetting("guest_page_phase", val)}
+                    onClick={() => updatePending("guest_page_phase", val)}
                     className={`px-4 py-2 font-body text-[11px] tracking-[2px] uppercase transition-colors ${
-                      (settings["guest_page_phase"] || "save_the_date") === val
+                      (getSettingValue("guest_page_phase", "save_the_date")) === val
                         ? "bg-gold text-white"
                         : "border border-gold-pale text-ink-soft hover:border-gold"
                     }`}
@@ -962,7 +1016,7 @@ export default function DashboardClient() {
               <input
                 type="text"
                 defaultValue={settings["global_video_url"] || ""}
-                onBlur={(e) => saveSetting("global_video_url", e.target.value)}
+                onBlur={(e) => updatePending("global_video_url", e.target.value)}
                 placeholder="https://youtube.com/watch?v=..."
                 className="w-full px-4 py-3 bg-white border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
               />
@@ -976,7 +1030,7 @@ export default function DashboardClient() {
               <input
                 type="text"
                 defaultValue={settings["room_block_link"] || ""}
-                onBlur={(e) => saveSetting("room_block_link", e.target.value)}
+                onBlur={(e) => updatePending("room_block_link", e.target.value)}
                 placeholder="https://..."
                 className="w-full px-4 py-3 bg-white border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
               />
@@ -993,7 +1047,7 @@ export default function DashboardClient() {
                   <input
                     type="text"
                     defaultValue={settings["destination_airport"] || "CUN"}
-                    onBlur={(e) => saveSetting("destination_airport", e.target.value.toUpperCase())}
+                    onBlur={(e) => updatePending("destination_airport", e.target.value.toUpperCase())}
                     placeholder="CUN"
                     className="w-full px-3 py-2 bg-white border border-gold-pale text-sm font-body font-light text-ink focus:outline-none focus:border-gold"
                   />
@@ -1003,7 +1057,7 @@ export default function DashboardClient() {
                   <input
                     type="date"
                     defaultValue={settings["travel_date_start"] || "2027-02-25"}
-                    onBlur={(e) => saveSetting("travel_date_start", e.target.value)}
+                    onBlur={(e) => updatePending("travel_date_start", e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-gold-pale text-sm font-body font-light text-ink focus:outline-none focus:border-gold"
                   />
                 </div>
@@ -1012,7 +1066,7 @@ export default function DashboardClient() {
                   <input
                     type="date"
                     defaultValue={settings["travel_date_end"] || "2027-02-28"}
-                    onBlur={(e) => saveSetting("travel_date_end", e.target.value)}
+                    onBlur={(e) => updatePending("travel_date_end", e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-gold-pale text-sm font-body font-light text-ink focus:outline-none focus:border-gold"
                   />
                 </div>
@@ -1030,7 +1084,7 @@ export default function DashboardClient() {
               <input
                 type="text"
                 defaultValue={settings["food_options"] || "Salmon,Chicken Fettuccine"}
-                onBlur={(e) => saveSetting("food_options", e.target.value)}
+                onBlur={(e) => updatePending("food_options", e.target.value)}
                 placeholder="Salmon,Chicken Fettuccine"
                 className="w-full px-4 py-3 bg-white border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
               />
@@ -1044,7 +1098,7 @@ export default function DashboardClient() {
               <input
                 type="text"
                 defaultValue={settings["resort_map_url"] || ""}
-                onBlur={(e) => saveSetting("resort_map_url", e.target.value)}
+                onBlur={(e) => updatePending("resort_map_url", e.target.value)}
                 placeholder="https://... (link to resort map PDF or image)"
                 className="w-full px-4 py-3 bg-white border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
               />
@@ -1060,29 +1114,29 @@ export default function DashboardClient() {
               </p>
               {(() => {
                 let events: any[] = [];
-                try { events = JSON.parse(settings["event_schedule"] || "[]"); } catch {}
+                try { events = JSON.parse(getSettingValue("event_schedule", "[]")); } catch {}
                 return (
                   <div className="space-y-3">
                     {events.map((ev: any, i: number) => (
                       <div key={i} className="border border-gold-pale/40 p-3 space-y-2">
                         <div className="grid grid-cols-2 gap-2">
-                          <input type="text" defaultValue={ev.name} placeholder="Event name" onBlur={(e) => { const arr = [...events]; arr[i] = { ...arr[i], name: e.target.value }; saveSetting("event_schedule", JSON.stringify(arr)); }} className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
-                          <input type="text" defaultValue={ev.location} placeholder="Location" onBlur={(e) => { const arr = [...events]; arr[i] = { ...arr[i], location: e.target.value }; saveSetting("event_schedule", JSON.stringify(arr)); }} className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                          <input type="text" defaultValue={ev.name} placeholder="Event name" onBlur={(e) => { const arr = [...events]; arr[i] = { ...arr[i], name: e.target.value }; updatePending("event_schedule", JSON.stringify(arr)); }} className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                          <input type="text" defaultValue={ev.location} placeholder="Location" onBlur={(e) => { const arr = [...events]; arr[i] = { ...arr[i], location: e.target.value }; updatePending("event_schedule", JSON.stringify(arr)); }} className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
                         </div>
                         <div className="grid grid-cols-2 gap-2">
-                          <input type="text" defaultValue={ev.date} placeholder="Date (e.g. Thursday, Feb 25)" onBlur={(e) => { const arr = [...events]; arr[i] = { ...arr[i], date: e.target.value }; saveSetting("event_schedule", JSON.stringify(arr)); }} className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
-                          <input type="text" defaultValue={ev.time} placeholder="Time (e.g. 6:00 PM)" onBlur={(e) => { const arr = [...events]; arr[i] = { ...arr[i], time: e.target.value }; saveSetting("event_schedule", JSON.stringify(arr)); }} className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                          <input type="text" defaultValue={ev.date} placeholder="Date (e.g. Thursday, Feb 25)" onBlur={(e) => { const arr = [...events]; arr[i] = { ...arr[i], date: e.target.value }; updatePending("event_schedule", JSON.stringify(arr)); }} className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                          <input type="text" defaultValue={ev.time} placeholder="Time (e.g. 6:00 PM)" onBlur={(e) => { const arr = [...events]; arr[i] = { ...arr[i], time: e.target.value }; updatePending("event_schedule", JSON.stringify(arr)); }} className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
                         </div>
                         <div className="flex gap-2">
-                          <input type="text" defaultValue={ev.notes} placeholder="Notes (dress code, etc.)" onBlur={(e) => { const arr = [...events]; arr[i] = { ...arr[i], notes: e.target.value }; saveSetting("event_schedule", JSON.stringify(arr)); }} className="flex-1 px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
-                          <button onClick={() => { const arr = events.filter((_: any, j: number) => j !== i); saveSetting("event_schedule", JSON.stringify(arr)); fetchAll(); }} className="text-red-400 text-xs hover:text-red-600 px-2">Remove</button>
+                          <input type="text" defaultValue={ev.notes} placeholder="Notes (dress code, etc.)" onBlur={(e) => { const arr = [...events]; arr[i] = { ...arr[i], notes: e.target.value }; updatePending("event_schedule", JSON.stringify(arr)); }} className="flex-1 px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                          <button onClick={() => { const arr = events.filter((_: any, j: number) => j !== i); updatePending("event_schedule", JSON.stringify(arr)); }} className="text-red-400 text-xs hover:text-red-600 px-2">Remove</button>
                         </div>
                       </div>
                     ))}
                     <button
                       onClick={() => {
                         const arr = [...events, { name: "", date: "", time: "", location: "", notes: "" }];
-                        saveSetting("event_schedule", JSON.stringify(arr));
+                        updatePending("event_schedule", JSON.stringify(arr));
                         fetchAll();
                       }}
                       className="text-gold text-xs font-body tracking-[1px] uppercase hover:underline"
@@ -1106,7 +1160,7 @@ export default function DashboardClient() {
               <textarea
                 rows={3}
                 defaultValue={settings["global_note"] || ""}
-                onBlur={(e) => saveSetting("global_note", e.target.value)}
+                onBlur={(e) => updatePending("global_note", e.target.value)}
                 placeholder="We can't wait to celebrate with you in paradise..."
                 className="w-full px-4 py-3 bg-white border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold resize-none"
               />
@@ -1124,16 +1178,16 @@ export default function DashboardClient() {
               </p>
               <button
                 onClick={() => {
-                  const current = settings["show_table_numbers"] === "true";
-                  saveSetting("show_table_numbers", current ? "false" : "true");
+                  const current = getSettingValue("show_table_numbers") === "true";
+                  updatePending("show_table_numbers", current ? "false" : "true");
                 }}
                 className={`px-5 py-2 font-body text-[11px] tracking-[2px] uppercase transition-colors ${
-                  settings["show_table_numbers"] === "true"
+                  getSettingValue("show_table_numbers") === "true"
                     ? "bg-gold text-white"
                     : "border border-gold-pale text-ink-soft"
                 }`}
               >
-                {settings["show_table_numbers"] === "true" ? "Visible to guests" : "Hidden from guests"}
+                {getSettingValue("show_table_numbers") === "true" ? "Visible to guests" : "Hidden from guests"}
               </button>
             </div>
 
@@ -1151,7 +1205,7 @@ export default function DashboardClient() {
                 min="1"
                 defaultValue={settings["reminder_threshold_days"] || "7"}
                 onBlur={(e) =>
-                  saveSetting("reminder_threshold_days", e.target.value)
+                  updatePending("reminder_threshold_days", e.target.value)
                 }
                 className="w-24 px-4 py-2 border border-gold-pale text-sm font-body font-light text-ink focus:outline-none focus:border-gold"
               />
@@ -1198,6 +1252,27 @@ export default function DashboardClient() {
                 Each row is one person. Rows with the same Household name are grouped into one household. Slug is auto-generated if blank.
               </p>
             </div>
+
+            {/* Save bar */}
+            {settingsDirty && (
+              <div className="sticky bottom-0 bg-[#FFFDF9] border-t border-gold-pale/40 p-4 flex items-center justify-between -mx-0">
+                <p className="font-body text-xs text-ink-soft">You have unsaved changes</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={discardSettings}
+                    className="px-5 py-2 border border-gold-pale text-ink-soft font-body text-[11px] tracking-[2px] uppercase hover:bg-sand transition-colors"
+                  >
+                    Discard
+                  </button>
+                  <button
+                    onClick={saveAllSettings}
+                    className="px-5 py-2 bg-gold text-white font-body text-[11px] tracking-[2px] uppercase hover:bg-gold-light transition-colors"
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -1421,6 +1496,47 @@ export default function DashboardClient() {
                 className="px-5 py-2 bg-gold text-white font-body text-[11px] tracking-[2px] uppercase hover:bg-gold-light transition-colors"
               >
                 {pendingClose ? "Save & close" : "Yes, save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings unsaved changes confirm */}
+      {showSettingsConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-ink/40" />
+          <div className="relative bg-[#FFFDF9] border border-gold-pale/60 p-8 max-w-sm w-full text-center">
+            <p className="font-display text-lg text-ink mb-2">Unsaved settings</p>
+            <p className="font-body text-sm text-ink-soft mb-6">
+              You have unsaved changes in Settings. Would you like to save them before leaving?
+            </p>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={() => {
+                  discardSettings();
+                  setShowSettingsConfirm(false);
+                  if (pendingTab) { setTab(pendingTab); setPendingTab(null); }
+                }}
+                className="px-5 py-2 border border-gold-pale text-ink-soft font-body text-[11px] tracking-[2px] uppercase hover:bg-sand transition-colors"
+              >
+                Discard
+              </button>
+              <button
+                onClick={() => { setShowSettingsConfirm(false); setPendingTab(null); }}
+                className="px-5 py-2 border border-gold-pale text-ink-soft font-body text-[11px] tracking-[2px] uppercase hover:bg-sand transition-colors"
+              >
+                Keep editing
+              </button>
+              <button
+                onClick={async () => {
+                  await saveAllSettings();
+                  setShowSettingsConfirm(false);
+                  if (pendingTab) { setTab(pendingTab); setPendingTab(null); }
+                }}
+                className="px-5 py-2 bg-gold text-white font-body text-[11px] tracking-[2px] uppercase hover:bg-gold-light transition-colors"
+              >
+                Save & leave
               </button>
             </div>
           </div>
