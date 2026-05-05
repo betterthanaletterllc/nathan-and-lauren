@@ -81,7 +81,10 @@ export const householdMembers = pgTable("household_members", {
   // Per-person travel checklist
   passportConfirmed: boolean("passport_confirmed").notNull().default(false),
   flightsBooked: boolean("flights_booked").notNull().default(false),
-  flightDetails: text("flight_details"),
+  departureDate: text("departure_date"),
+  departureFlight: text("departure_flight"),
+  returnDate: text("return_date"),
+  returnFlight: text("return_flight"),
   hotelBooked: boolean("hotel_booked").notNull().default(false),
 
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -104,7 +107,7 @@ export const settings = pgTable("settings", {
 // Settings keys:
 // 'global_note' — default note shown on all guest pages
 // 'reminder_threshold_days' — days before flagging a guest as needing a nudge
-// 'guest_page_phase' — 'save_the_date' | 'rsvp' | 'checklist' | 'final'
+// 'guest_page_phase' — 'save_the_date' | 'rsvp' | 'checklist' | 'arrived' | 'final'
 // 'show_table_numbers' — 'true' | 'false'
 // 'global_video_url' — YouTube/video URL shown during RSVP phase (fallback if no per-household video)
 // 'room_block_link' — URL for hotel room block booking

@@ -932,6 +932,7 @@ export default function DashboardClient() {
                   ["save_the_date", "Save the Date"],
                   ["rsvp", "RSVP"],
                   ["checklist", "Travel Checklist"],
+                  ["arrived", "Arrived / Live"],
                   ["final", "Final (All Info)"],
                 ].map(([val, label]) => (
                   <button
@@ -1033,6 +1034,64 @@ export default function DashboardClient() {
                 placeholder="Salmon,Chicken Fettuccine"
                 className="w-full px-4 py-3 bg-white border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
               />
+            </div>
+
+            {/* Resort map URL */}
+            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+              <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block mb-2">
+                Resort map URL (arrived phase)
+              </label>
+              <input
+                type="text"
+                defaultValue={settings["resort_map_url"] || ""}
+                onBlur={(e) => saveSetting("resort_map_url", e.target.value)}
+                placeholder="https://... (link to resort map PDF or image)"
+                className="w-full px-4 py-3 bg-white border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
+              />
+            </div>
+
+            {/* Event schedule */}
+            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+              <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block mb-2">
+                Event schedule (arrived phase)
+              </label>
+              <p className="font-body text-xs text-ink-faint mb-3">
+                Events shown on guest pages during the arrived phase. Displayed in order.
+              </p>
+              {(() => {
+                let events: any[] = [];
+                try { events = JSON.parse(settings["event_schedule"] || "[]"); } catch {}
+                return (
+                  <div className="space-y-3">
+                    {events.map((ev: any, i: number) => (
+                      <div key={i} className="border border-gold-pale/40 p-3 space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <input type="text" defaultValue={ev.name} placeholder="Event name" onBlur={(e) => { const arr = [...events]; arr[i] = { ...arr[i], name: e.target.value }; saveSetting("event_schedule", JSON.stringify(arr)); }} className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                          <input type="text" defaultValue={ev.location} placeholder="Location" onBlur={(e) => { const arr = [...events]; arr[i] = { ...arr[i], location: e.target.value }; saveSetting("event_schedule", JSON.stringify(arr)); }} className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input type="text" defaultValue={ev.date} placeholder="Date (e.g. Thursday, Feb 25)" onBlur={(e) => { const arr = [...events]; arr[i] = { ...arr[i], date: e.target.value }; saveSetting("event_schedule", JSON.stringify(arr)); }} className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                          <input type="text" defaultValue={ev.time} placeholder="Time (e.g. 6:00 PM)" onBlur={(e) => { const arr = [...events]; arr[i] = { ...arr[i], time: e.target.value }; saveSetting("event_schedule", JSON.stringify(arr)); }} className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                        </div>
+                        <div className="flex gap-2">
+                          <input type="text" defaultValue={ev.notes} placeholder="Notes (dress code, etc.)" onBlur={(e) => { const arr = [...events]; arr[i] = { ...arr[i], notes: e.target.value }; saveSetting("event_schedule", JSON.stringify(arr)); }} className="flex-1 px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                          <button onClick={() => { const arr = events.filter((_: any, j: number) => j !== i); saveSetting("event_schedule", JSON.stringify(arr)); fetchAll(); }} className="text-red-400 text-xs hover:text-red-600 px-2">Remove</button>
+                        </div>
+                      </div>
+                    ))}
+                    <button
+                      onClick={() => {
+                        const arr = [...events, { name: "", date: "", time: "", location: "", notes: "" }];
+                        saveSetting("event_schedule", JSON.stringify(arr));
+                        fetchAll();
+                      }}
+                      className="text-gold text-xs font-body tracking-[1px] uppercase hover:underline"
+                    >
+                      + Add event
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Global note */}
@@ -1241,8 +1300,13 @@ export default function DashboardClient() {
                     </div>
                   </div>
                   {editingGuest.flightDetails && (
-                    <p className="text-xs text-ink-soft mt-2">Flight: {editingGuest.flightDetails}</p>
+                    <p className="text-xs text-ink-soft mt-2">Flight (legacy): {editingGuest.flightDetails}</p>
                   )}
+                  {editingGuest.members?.filter((m: any) => m.flightsBooked).map((m: any, i: number) => (
+                    <p key={i} className="text-xs text-ink-soft mt-1">
+                      {m.firstName}: {m.departureFlight || "—"} ({m.departureDate || "—"}) → {m.returnFlight || "—"} ({m.returnDate || "—"})
+                    </p>
+                  ))}
                   {editingGuest.arrivalDate && (
                     <p className="text-xs text-ink-soft mt-1">Arrival: {editingGuest.arrivalDate} · Departure: {editingGuest.departureDate || "—"}</p>
                   )}

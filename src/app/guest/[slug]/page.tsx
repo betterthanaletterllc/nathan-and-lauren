@@ -61,6 +61,9 @@ export default async function GuestPage({ params }: Props) {
   const travelDateStart = config["travel_date_start"] || "2027-02-25";
   const travelDateEnd = config["travel_date_end"] || "2027-02-28";
   const foodOptions = (config["food_options"] || "Salmon,Chicken Fettuccine").split(",").map((s) => s.trim()).filter(Boolean);
+  const resortMapUrl = config["resort_map_url"] || "";
+  let eventSchedule: any[] = [];
+  try { eventSchedule = JSON.parse(config["event_schedule"] || "[]"); } catch {}
 
   // Fetch household members
   const members = await db
@@ -102,7 +105,10 @@ export default async function GuestPage({ params }: Props) {
         isPlusOne: m.isPlusOne,
         passportConfirmed: m.passportConfirmed,
         flightsBooked: m.flightsBooked,
-        flightDetails: m.flightDetails,
+        departureDate: m.departureDate,
+        departureFlight: m.departureFlight,
+        returnDate: m.returnDate,
+        returnFlight: m.returnFlight,
         hotelBooked: m.hotelBooked,
       }))}
       note={note}
@@ -113,6 +119,8 @@ export default async function GuestPage({ params }: Props) {
       travelDateStart={travelDateStart}
       travelDateEnd={travelDateEnd}
       foodOptions={foodOptions}
+      resortMapUrl={resortMapUrl}
+      eventSchedule={eventSchedule}
     />
   );
 }

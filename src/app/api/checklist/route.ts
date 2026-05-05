@@ -59,7 +59,10 @@ export async function POST(req: NextRequest) {
             .set({
               passportConfirmed: mc.passportConfirmed ?? false,
               flightsBooked: mc.flightsBooked ?? false,
-              flightDetails: mc.flightDetails || null,
+              departureDate: mc.departureDate || null,
+              departureFlight: mc.departureFlight || null,
+              returnDate: mc.returnDate || null,
+              returnFlight: mc.returnFlight || null,
               hotelBooked: mc.hotelBooked ?? false,
             })
             .where(eq(householdMembers.id, mc.id));

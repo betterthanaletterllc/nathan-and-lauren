@@ -13,7 +13,10 @@ interface MemberData {
   isPlusOne: boolean;
   passportConfirmed: boolean;
   flightsBooked: boolean;
-  flightDetails: string | null;
+  departureDate: string | null;
+  departureFlight: string | null;
+  returnDate: string | null;
+  returnFlight: string | null;
   hotelBooked: boolean;
 }
 
@@ -47,9 +50,11 @@ interface Props {
   travelDateStart: string;
   travelDateEnd: string;
   foodOptions: string[];
+  resortMapUrl: string;
+  eventSchedule: { name: string; date: string; time: string; location: string; notes: string }[];
 }
 
-export default function GuestPageClient({ guest, members: initialMembers, note, phase, videoUrl, roomBlockLink, destinationAirport, travelDateStart, travelDateEnd, foodOptions }: Props) {
+export default function GuestPageClient({ guest, members: initialMembers, note, phase, videoUrl, roomBlockLink, destinationAirport, travelDateStart, travelDateEnd, foodOptions, resortMapUrl, eventSchedule }: Props) {
   const [submitted, setSubmitted] = useState(guest.addressSubmitted);
   const [submitting, setSubmitting] = useState(false);
   const [rsvpSubmitted, setRsvpSubmitted] = useState(guest.rsvpSubmitted);
@@ -84,7 +89,10 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
       lastName: m.lastName,
       passportConfirmed: m.passportConfirmed || false,
       flightsBooked: m.flightsBooked || false,
-      flightDetails: m.flightDetails || "",
+      departureDate: m.departureDate || "",
+      departureFlight: m.departureFlight || "",
+      returnDate: m.returnDate || "",
+      returnFlight: m.returnFlight || "",
       hotelBooked: m.hotelBooked || false,
     }))
   );
@@ -751,9 +759,36 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                         Flights booked
                       </label>
                       {m.flightsBooked && (
-                        <input type="text" value={m.flightDetails} onChange={(e) => {
-                          const arr = [...memberChecklist]; arr[i] = { ...arr[i], flightDetails: e.target.value }; setMemberChecklist(arr);
-                        }} placeholder="Flight number(s) and dates" className={inputClass} />
+                        <div className="space-y-2 ml-6">
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="font-body text-[9px] uppercase text-ink-faint">Departure date</label>
+                              <input type="date" value={m.departureDate} onChange={(e) => {
+                                const arr = [...memberChecklist]; arr[i] = { ...arr[i], departureDate: e.target.value }; setMemberChecklist(arr);
+                              }} className={inputClass} />
+                            </div>
+                            <div>
+                              <label className="font-body text-[9px] uppercase text-ink-faint">Flight #</label>
+                              <input type="text" value={m.departureFlight} onChange={(e) => {
+                                const arr = [...memberChecklist]; arr[i] = { ...arr[i], departureFlight: e.target.value }; setMemberChecklist(arr);
+                              }} placeholder="e.g. AA 1234" className={inputClass} />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <label className="font-body text-[9px] uppercase text-ink-faint">Return date</label>
+                              <input type="date" value={m.returnDate} onChange={(e) => {
+                                const arr = [...memberChecklist]; arr[i] = { ...arr[i], returnDate: e.target.value }; setMemberChecklist(arr);
+                              }} className={inputClass} />
+                            </div>
+                            <div>
+                              <label className="font-body text-[9px] uppercase text-ink-faint">Flight #</label>
+                              <input type="text" value={m.returnFlight} onChange={(e) => {
+                                const arr = [...memberChecklist]; arr[i] = { ...arr[i], returnFlight: e.target.value }; setMemberChecklist(arr);
+                              }} placeholder="e.g. AA 5678" className={inputClass} />
+                            </div>
+                          </div>
+                        </div>
                       )}
 
                       <label className="flex items-center gap-2 font-body text-sm text-ink">
@@ -817,6 +852,71 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                   >
                     {checklistSubmitting ? "Submitting..." : "Submit Checklist"}
                   </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Arrived / Live Event Guide */}
+          {(phase === "arrived" || phase === "final") && (
+            <div className="mt-8 animate-fadeUp animation-delay-700">
+              <div className="w-10 h-px bg-gold mx-auto mb-6" />
+
+              <p className="font-body font-normal text-[10px] tracking-[6px] uppercase text-gold text-center mb-6">
+                Welcome to Cancún
+              </p>
+
+              {/* Resort map */}
+              {resortMapUrl && (
+                <a
+                  href={resortMapUrl}
+                  target="_blank"
+                  rel="noopener"
+                  className="block py-3.5 text-center bg-gold text-white font-body font-normal text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors mb-4"
+                >
+                  View Resort Map
+                </a>
+              )}
+
+              {/* Event schedule */}
+              {eventSchedule.length > 0 && (
+                <div className="space-y-0">
+                  <p className="font-body font-light text-[11px] tracking-[2px] uppercase text-ink-soft text-center mb-4">
+                    Schedule of events
+                  </p>
+                  {eventSchedule.map((event, i) => (
+                    <div key={i} className="border-b border-gold-pale/40 last:border-0 py-4 first:pt-0">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="font-display text-base text-ink">{event.name}</p>
+                          <p className="font-body font-light text-xs text-ink-soft mt-0.5">
+                            {event.location}
+                          </p>
+                          {event.notes && (
+                            <p className="font-body font-light text-xs text-ink-faint mt-1 italic">
+                              {event.notes}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="font-body text-xs text-ink-soft">{event.date}</p>
+                          <p className="font-display text-sm text-gold">{event.time}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Table number (if enabled) */}
+              {guest.tableNumber && (
+                <div className="mt-6 text-center">
+                  <p className="font-body font-light text-[10px] tracking-[3px] uppercase text-ink-faint mb-2">
+                    Your table
+                  </p>
+                  <div className="w-16 h-16 rounded-full border border-gold mx-auto flex items-center justify-center">
+                    <span className="font-display text-2xl text-ink">{guest.tableNumber}</span>
+                  </div>
                 </div>
               )}
             </div>
