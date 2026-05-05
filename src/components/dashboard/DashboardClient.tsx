@@ -13,6 +13,14 @@ interface Member {
   email: string;
   dietaryRestrictions: string;
   isChild: boolean;
+  isPlusOne: boolean;
+  rsvpStatus: string | null;
+  foodChoice: string | null;
+  foodAllergies: string | null;
+  attendingWelcome: boolean | null;
+  attendingCeremony: boolean | null;
+  attendingReception: boolean | null;
+  attendingBrunch: boolean | null;
 }
 
 interface Guest {
@@ -23,6 +31,8 @@ interface Guest {
   tableNumber: number | null;
   side: string | null;
   note: string | null;
+  plusOneAllowed: boolean;
+  videoUrl: string | null;
   members: Member[];
   addressLine1: string | null;
   addressLine2: string | null;
@@ -30,6 +40,18 @@ interface Guest {
   state: string | null;
   zip: string | null;
   country: string | null;
+  rsvpSubmittedAt: string | null;
+  passportConfirmed: boolean;
+  flightsBooked: boolean;
+  flightDetails: string | null;
+  hotelBooked: boolean;
+  hotelInRoomBlock: boolean | null;
+  transportNeeded: boolean | null;
+  arrivalDate: string | null;
+  departureDate: string | null;
+  songRequest: string | null;
+  messageToCouple: string | null;
+  checklistSubmittedAt: string | null;
   linkSentAt: string | null;
   firstOpenedAt: string | null;
   openCount: number;
@@ -99,7 +121,13 @@ export default function DashboardClient() {
     const outstanding = total - submitted;
     const headcount = guests.reduce((s, g) => s + (g.members?.length || g.partySize), 0);
     const kids = guests.reduce((s, g) => s + (g.members?.filter((m: Member) => m.isChild).length || 0), 0);
-    return { total, opened, submitted, outstanding, headcount, kids };
+    const rsvpYes = guests.reduce((s, g) => s + (g.members?.filter((m: Member) => m.rsvpStatus === "coming").length || 0), 0);
+    const rsvpNo = guests.reduce((s, g) => s + (g.members?.filter((m: Member) => m.rsvpStatus === "not_coming").length || 0), 0);
+    const rsvpPending = headcount - rsvpYes - rsvpNo;
+    const passports = guests.filter((g) => g.passportConfirmed).length;
+    const flights = guests.filter((g) => g.flightsBooked).length;
+    const hotels = guests.filter((g) => g.hotelBooked).length;
+    return { total, opened, submitted, outstanding, headcount, kids, rsvpYes, rsvpNo, rsvpPending, passports, flights, hotels };
   }, [guests]);
 
   // Nudge list
@@ -263,7 +291,7 @@ export default function DashboardClient() {
   const [newName, setNewName] = useState("");
   const [newSide, setNewSide] = useState("");
   const [newMembers, setNewMembers] = useState<Member[]>([
-    { firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false },
+    { firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false, isPlusOne: false, rsvpStatus: null, foodChoice: null, foodAllergies: null, attendingWelcome: null, attendingCeremony: null, attendingReception: null, attendingBrunch: null },
   ]);
   const [addError, setAddError] = useState("");
 
@@ -273,6 +301,8 @@ export default function DashboardClient() {
   const [editSide, setEditSide] = useState("");
   const [editNote, setEditNote] = useState("");
   const [editTable, setEditTable] = useState("");
+  const [editPlusOne, setEditPlusOne] = useState(false);
+  const [editVideo, setEditVideo] = useState("");
   const [editMembers, setEditMembers] = useState<Member[]>([]);
   const [editDirty, setEditDirty] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -284,7 +314,9 @@ export default function DashboardClient() {
     setEditSide(g.side || "");
     setEditNote(g.note || "");
     setEditTable(g.tableNumber?.toString() || "");
-    setEditMembers(g.members?.length > 0 ? g.members.map((m) => ({ ...m })) : [{ firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false }]);
+    setEditPlusOne(g.plusOneAllowed);
+    setEditVideo(g.videoUrl || "");
+    setEditMembers(g.members?.length > 0 ? g.members.map((m) => ({ ...m })) : [{ firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false, isPlusOne: false, rsvpStatus: null, foodChoice: null, foodAllergies: null, attendingWelcome: null, attendingCeremony: null, attendingReception: null, attendingBrunch: null }]);
     setEditDirty(false);
     setShowConfirm(false);
     setPendingClose(false);
@@ -310,6 +342,8 @@ export default function DashboardClient() {
         side: editSide || null,
         note: editNote || null,
         tableNumber: parseInt(editTable) || null,
+        plusOneAllowed: editPlusOne,
+        videoUrl: editVideo || null,
         members: editMembers.filter((m) => m.firstName || m.lastName),
       }),
     });
@@ -395,17 +429,34 @@ export default function DashboardClient() {
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
               {[
                 ["Households", stats.total],
-                ["Opened", stats.opened],
-                ["Addresses In", stats.submitted],
-                ["Outstanding", stats.outstanding],
                 ["Headcount", stats.headcount],
                 ["Kids", stats.kids],
+                ["RSVP Yes", stats.rsvpYes],
+                ["RSVP No", stats.rsvpNo],
+                ["RSVP Pending", stats.rsvpPending],
               ].map(([label, val]) => (
                 <div key={label as string} className={cardClass}>
                   <p className="font-body font-light text-[10px] tracking-[3px] uppercase text-ink-faint mb-1">
                     {label}
                   </p>
                   <p className="font-display text-3xl text-ink">{val}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Travel progress */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {[
+                ["Addresses In", `${stats.submitted}/${stats.total}`],
+                ["Passports", `${stats.passports}/${stats.total}`],
+                ["Flights", `${stats.flights}/${stats.total}`],
+                ["Hotels", `${stats.hotels}/${stats.total}`],
+              ].map(([label, val]) => (
+                <div key={label as string} className={cardClass}>
+                  <p className="font-body font-light text-[10px] tracking-[3px] uppercase text-ink-faint mb-1">
+                    {label}
+                  </p>
+                  <p className="font-display text-2xl text-ink">{val}</p>
                 </div>
               ))}
             </div>
@@ -554,7 +605,7 @@ export default function DashboardClient() {
                   ))}
                 </div>
                 <button
-                  onClick={() => setNewMembers([...newMembers, { firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false }])}
+                  onClick={() => setNewMembers([...newMembers, { firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false, isPlusOne: false, rsvpStatus: null, foodChoice: null, foodAllergies: null, attendingWelcome: null, attendingCeremony: null, attendingReception: null, attendingBrunch: null }])}
                   className="mt-2 text-gold text-xs font-body tracking-[1px] uppercase hover:underline"
                 >
                   + Add another member
@@ -572,7 +623,7 @@ export default function DashboardClient() {
                     addGuest(newName.trim(), newMembers.filter((m) => m.firstName || m.lastName), newSide);
                     setNewName("");
                     setNewSide("");
-                    setNewMembers([{ firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false }]);
+                    setNewMembers([{ firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false, isPlusOne: false, rsvpStatus: null, foodChoice: null, foodAllergies: null, attendingWelcome: null, attendingCeremony: null, attendingReception: null, attendingBrunch: null }]);
                   } else {
                     setAddError("Enter a household name");
                   }
@@ -867,6 +918,71 @@ export default function DashboardClient() {
         {/* SETTINGS TAB */}
         {tab === "settings" && (
           <div className="space-y-6 max-w-xl">
+            {/* Guest page phase */}
+            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+              <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block mb-2">
+                Guest page phase
+              </label>
+              <p className="font-body text-xs text-ink-faint mb-3">
+                Controls what guests see on their personal page. Each phase adds more content.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  ["save_the_date", "Save the Date"],
+                  ["rsvp", "RSVP"],
+                  ["checklist", "Travel Checklist"],
+                  ["final", "Final (All Info)"],
+                ].map(([val, label]) => (
+                  <button
+                    key={val}
+                    onClick={() => saveSetting("guest_page_phase", val)}
+                    className={`px-4 py-2 font-body text-[11px] tracking-[2px] uppercase transition-colors ${
+                      (settings["guest_page_phase"] || "save_the_date") === val
+                        ? "bg-gold text-white"
+                        : "border border-gold-pale text-ink-soft hover:border-gold"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Global video URL */}
+            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+              <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block mb-2">
+                Global video URL (RSVP phase)
+              </label>
+              <p className="font-body text-xs text-ink-faint mb-3">
+                YouTube or video URL shown on every guest&apos;s page during the RSVP phase.
+                Per-household videos can override this in the household detail.
+              </p>
+              <input
+                type="text"
+                defaultValue={settings["global_video_url"] || ""}
+                onBlur={(e) => saveSetting("global_video_url", e.target.value)}
+                placeholder="https://youtube.com/watch?v=..."
+                className="w-full px-4 py-3 bg-white border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
+              />
+            </div>
+
+            {/* Room block link */}
+            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+              <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block mb-2">
+                Room block booking link
+              </label>
+              <p className="font-body text-xs text-ink-faint mb-3">
+                Link shown to guests during the checklist phase for booking rooms.
+              </p>
+              <input
+                type="text"
+                defaultValue={settings["room_block_link"] || ""}
+                onBlur={(e) => saveSetting("room_block_link", e.target.value)}
+                placeholder="https://..."
+                className="w-full px-4 py-3 bg-white border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
+              />
+            </div>
+
             {/* Global note */}
             <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
               <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block mb-2">
@@ -1012,13 +1128,25 @@ export default function DashboardClient() {
                 </div>
               </div>
 
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 text-sm font-body text-ink-soft cursor-pointer">
+                  <input type="checkbox" checked={editPlusOne} onChange={(e) => { setEditPlusOne(e.target.checked); setEditDirty(true); }} />
+                  Plus-one allowed
+                </label>
+              </div>
+
+              <div>
+                <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-1">Video URL (for RSVP phase)</label>
+                <input type="text" value={editVideo} onChange={(e) => { setEditVideo(e.target.value); setEditDirty(true); }} placeholder="YouTube or video link" className="w-full px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+              </div>
+
               <div>
                 <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-1">Personal note</label>
                 <textarea rows={2} value={editNote} onChange={(e) => { setEditNote(e.target.value); setEditDirty(true); }} placeholder="Uses global note if blank" className="w-full px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold resize-none" />
               </div>
 
               {/* Status */}
-              <div className="bg-sand p-4 grid grid-cols-3 gap-4 text-center">
+              <div className="bg-sand p-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
                 <div>
                   <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">Link opened</p>
                   <p className="font-body text-sm text-ink mt-1">{editingGuest.firstOpenedAt ? `Yes (${editingGuest.openCount}×)` : "No"}</p>
@@ -1028,17 +1156,58 @@ export default function DashboardClient() {
                   <p className="font-body text-sm text-ink mt-1">{editingGuest.addressSubmittedAt ? `${editingGuest.city}, ${editingGuest.state}` : "Not submitted"}</p>
                 </div>
                 <div>
+                  <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">RSVP</p>
+                  <p className="font-body text-sm text-ink mt-1">{editingGuest.rsvpSubmittedAt ? "Submitted" : "Pending"}</p>
+                </div>
+                <div>
                   <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">Guest link</p>
                   <button onClick={() => { navigator.clipboard.writeText(`${baseUrl}/guest/${editingGuest.slug}`); }} className="font-body text-sm text-gold hover:underline mt-1">Copy link</button>
                 </div>
               </div>
+
+              {/* Travel checklist status (read-only) */}
+              {editingGuest.rsvpSubmittedAt && (
+                <div className="bg-sand p-4">
+                  <p className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint mb-3">Travel checklist</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm font-body">
+                    <div className="flex items-center gap-2">
+                      <span className={editingGuest.passportConfirmed ? "text-green-600" : "text-ink-faint"}>{editingGuest.passportConfirmed ? "✓" : "○"}</span>
+                      Passport
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={editingGuest.flightsBooked ? "text-green-600" : "text-ink-faint"}>{editingGuest.flightsBooked ? "✓" : "○"}</span>
+                      Flights
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={editingGuest.hotelBooked ? "text-green-600" : "text-ink-faint"}>{editingGuest.hotelBooked ? "✓" : "○"}</span>
+                      Hotel {editingGuest.hotelInRoomBlock === false && "(outside block)"}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={editingGuest.transportNeeded ? "text-blue-600" : "text-ink-faint"}>{editingGuest.transportNeeded ? "✓" : "○"}</span>
+                      Transport needed
+                    </div>
+                  </div>
+                  {editingGuest.flightDetails && (
+                    <p className="text-xs text-ink-soft mt-2">Flight: {editingGuest.flightDetails}</p>
+                  )}
+                  {editingGuest.arrivalDate && (
+                    <p className="text-xs text-ink-soft mt-1">Arrival: {editingGuest.arrivalDate} · Departure: {editingGuest.departureDate || "—"}</p>
+                  )}
+                  {editingGuest.songRequest && (
+                    <p className="text-xs text-ink-soft mt-1">Song request: {editingGuest.songRequest}</p>
+                  )}
+                  {editingGuest.messageToCouple && (
+                    <p className="text-xs text-ink-soft mt-1">Message: {editingGuest.messageToCouple}</p>
+                  )}
+                </div>
+              )}
 
               {/* Members */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint">Members ({editMembers.length})</label>
                   <button
-                    onClick={() => { setEditMembers([...editMembers, { firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false }]); setEditDirty(true); }}
+                    onClick={() => { setEditMembers([...editMembers, { firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false, isPlusOne: false, rsvpStatus: null, foodChoice: null, foodAllergies: null, attendingWelcome: null, attendingCeremony: null, attendingReception: null, attendingBrunch: null }]); setEditDirty(true); }}
                     className="text-gold text-xs font-body tracking-[1px] uppercase hover:underline"
                   >
                     + Add member
@@ -1056,12 +1225,22 @@ export default function DashboardClient() {
                         <input type="text" value={m.phone || ""} onChange={(e) => { const arr = [...editMembers]; arr[i] = { ...arr[i], phone: e.target.value }; setEditMembers(arr); setEditDirty(true); }} placeholder="Phone" className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
                         <input type="text" value={m.email || ""} onChange={(e) => { const arr = [...editMembers]; arr[i] = { ...arr[i], email: e.target.value }; setEditMembers(arr); setEditDirty(true); }} placeholder="Email" className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
                       </div>
-                      <div className="flex items-center gap-3">
-                        <input type="text" value={m.dietaryRestrictions || ""} onChange={(e) => { const arr = [...editMembers]; arr[i] = { ...arr[i], dietaryRestrictions: e.target.value }; setEditMembers(arr); setEditDirty(true); }} placeholder="Dietary restrictions" className="flex-1 px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
-                        <label className="flex items-center gap-2 text-sm font-body font-light text-ink-soft whitespace-nowrap">
+                      <div className="flex items-center gap-4 flex-wrap">
+                        <input type="text" value={m.dietaryRestrictions || ""} onChange={(e) => { const arr = [...editMembers]; arr[i] = { ...arr[i], dietaryRestrictions: e.target.value }; setEditMembers(arr); setEditDirty(true); }} placeholder="Dietary restrictions" className="flex-1 min-w-[150px] px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                        <label className="flex items-center gap-1.5 text-xs font-body text-ink-soft whitespace-nowrap">
                           <input type="checkbox" checked={m.isChild} onChange={(e) => { const arr = [...editMembers]; arr[i] = { ...arr[i], isChild: e.target.checked }; setEditMembers(arr); setEditDirty(true); }} />
                           Child
                         </label>
+                        <label className="flex items-center gap-1.5 text-xs font-body text-ink-soft whitespace-nowrap">
+                          <input type="checkbox" checked={m.isPlusOne} onChange={(e) => { const arr = [...editMembers]; arr[i] = { ...arr[i], isPlusOne: e.target.checked }; setEditMembers(arr); setEditDirty(true); }} />
+                          Plus one
+                        </label>
+                        {m.rsvpStatus && (
+                          <span className={`text-xs font-body px-2 py-0.5 ${m.rsvpStatus === "coming" ? "text-green-700 bg-green-50" : "text-red-600 bg-red-50"}`}>
+                            {m.rsvpStatus === "coming" ? "Coming" : "Not coming"}
+                            {m.foodChoice && ` · ${m.foodChoice === "salmon" ? "Salmon" : "Chicken"}`}
+                          </span>
+                        )}
                         {editMembers.length > 1 && (
                           <button onClick={() => { setEditMembers(editMembers.filter((_, j) => j !== i)); setEditDirty(true); }} className="text-red-400 text-xs hover:text-red-600 whitespace-nowrap">Remove</button>
                         )}

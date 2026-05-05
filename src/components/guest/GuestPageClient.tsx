@@ -2,14 +2,50 @@
 
 import { useEffect, useState } from "react";
 
-interface Props {
-  guest: { slug: string; name: string; addressSubmitted: boolean; tableNumber: number | null };
-  note: string;
+interface MemberData {
+  id: number;
+  firstName: string;
+  lastName: string;
+  rsvpStatus: string | null;
+  foodChoice: string | null;
+  foodAllergies: string | null;
+  isChild: boolean;
+  isPlusOne: boolean;
 }
 
-export default function GuestPageClient({ guest, note }: Props) {
+interface Props {
+  guest: {
+    slug: string;
+    name: string;
+    addressSubmitted: boolean;
+    tableNumber: number | null;
+    plusOneAllowed: boolean;
+    rsvpSubmitted: boolean;
+    checklistSubmitted: boolean;
+    passportConfirmed: boolean;
+    flightsBooked: boolean;
+    flightDetails: string | null;
+    hotelBooked: boolean;
+    hotelInRoomBlock: boolean | null;
+    transportNeeded: boolean | null;
+    arrivalDate: string | null;
+    departureDate: string | null;
+    emergencyContact: string | null;
+    songRequest: string | null;
+    messageToCouple: string | null;
+  };
+  members: MemberData[];
+  note: string;
+  phase: string;
+  videoUrl: string;
+  roomBlockLink: string;
+}
+
+export default function GuestPageClient({ guest, members: initialMembers, note, phase, videoUrl, roomBlockLink }: Props) {
   const [submitted, setSubmitted] = useState(guest.addressSubmitted);
   const [submitting, setSubmitting] = useState(false);
+  const [rsvpSubmitted, setRsvpSubmitted] = useState(guest.rsvpSubmitted);
+  const [checklistSubmitted, setChecklistSubmitted] = useState(guest.checklistSubmitted);
   const [form, setForm] = useState({
     addressLine1: "",
     addressLine2: "",
@@ -18,6 +54,35 @@ export default function GuestPageClient({ guest, note }: Props) {
     zip: "",
     country: "US",
   });
+
+  // RSVP state
+  const [rsvpMembers, setRsvpMembers] = useState(
+    initialMembers.map((m) => ({
+      ...m,
+      rsvpStatus: m.rsvpStatus || "",
+      foodChoice: m.foodChoice || "",
+      foodAllergies: m.foodAllergies || "",
+    }))
+  );
+  const [plusOne, setPlusOne] = useState({ firstName: "", lastName: "", phone: "", email: "", foodChoice: "", foodAllergies: "" });
+  const [showPlusOne, setShowPlusOne] = useState(false);
+  const [rsvpSubmitting, setRsvpSubmitting] = useState(false);
+
+  // Checklist state
+  const [checklist, setChecklist] = useState({
+    passportConfirmed: guest.passportConfirmed,
+    flightsBooked: guest.flightsBooked,
+    flightDetails: guest.flightDetails || "",
+    hotelBooked: guest.hotelBooked,
+    hotelInRoomBlock: guest.hotelInRoomBlock ?? true,
+    transportNeeded: guest.transportNeeded ?? false,
+    arrivalDate: guest.arrivalDate || "",
+    departureDate: guest.departureDate || "",
+    emergencyContact: guest.emergencyContact || "",
+    songRequest: guest.songRequest || "",
+    messageToCouple: guest.messageToCouple || "",
+  });
+  const [checklistSubmitting, setChecklistSubmitting] = useState(false);
 
   // Track open on mount
   useEffect(() => {
@@ -42,6 +107,56 @@ export default function GuestPageClient({ guest, note }: Props) {
       if (res.ok) setSubmitted(true);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleRsvpSubmit() {
+    setRsvpSubmitting(true);
+    try {
+      const members = rsvpMembers.map((m) => ({
+        id: m.id,
+        rsvpStatus: m.rsvpStatus || "not_coming",
+        foodChoice: m.rsvpStatus === "coming" ? m.foodChoice : null,
+        foodAllergies: m.rsvpStatus === "coming" ? m.foodAllergies : null,
+      }));
+
+      // Add plus one if applicable
+      if (showPlusOne && plusOne.firstName) {
+        members.push({
+          id: undefined,
+          isPlusOne: true,
+          firstName: plusOne.firstName,
+          lastName: plusOne.lastName,
+          phone: plusOne.phone,
+          email: plusOne.email,
+          rsvpStatus: "coming",
+          foodChoice: plusOne.foodChoice,
+          foodAllergies: plusOne.foodAllergies,
+        } as any);
+      }
+
+      const res = await fetch("/api/rsvp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug: guest.slug, members }),
+      });
+      if (res.ok) setRsvpSubmitted(true);
+    } finally {
+      setRsvpSubmitting(false);
+    }
+  }
+
+  async function handleChecklistSubmit() {
+    setChecklistSubmitting(true);
+    try {
+      const res = await fetch("/api/checklist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug: guest.slug, ...checklist }),
+      });
+      if (res.ok) setChecklistSubmitted(true);
+    } finally {
+      setChecklistSubmitting(false);
     }
   }
 
@@ -227,6 +342,7 @@ export default function GuestPageClient({ guest, note }: Props) {
           <div className="w-10 h-px bg-gold mx-auto mb-8 animate-fadeUp animation-delay-600" />
 
           {/* Address form or thank you */}
+          {(phase === "save_the_date" || !submitted) && (
           <div className="animate-fadeUp animation-delay-700">
             {submitted ? (
               <div className="py-4">
@@ -316,6 +432,253 @@ export default function GuestPageClient({ guest, note }: Props) {
               </>
             )}
           </div>
+          )}
+
+          {/* RSVP Section */}
+          {(phase === "rsvp" || phase === "checklist" || phase === "final") && (
+            <div className="animate-fadeUp animation-delay-700">
+              {/* Video */}
+              {videoUrl && !rsvpSubmitted && (
+                <div className="mb-8">
+                  <div className="aspect-video w-full">
+                    <iframe
+                      src={videoUrl.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/")}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                </div>
+              )}
+
+              {rsvpSubmitted ? (
+                <div className="py-4">
+                  <p className="font-body font-light text-sm text-ink-soft mb-1">
+                    Thank you for your RSVP!
+                  </p>
+                  <p className="font-body font-light text-xs text-ink-faint">
+                    {rsvpMembers.filter((m) => m.rsvpStatus === "coming").length > 0
+                      ? `We can't wait to celebrate with you in Cancún!`
+                      : "We'll miss you! Thank you for letting us know."}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4 text-left">
+                  <p className="font-body font-light text-[11px] tracking-[2px] uppercase text-ink-soft text-center mb-4">
+                    RSVP for your household
+                  </p>
+
+                  {rsvpMembers.map((m, i) => (
+                    <div key={m.id} className="border border-gold-pale/40 p-4 space-y-3">
+                      <p className="font-body font-medium text-sm text-ink">
+                        {m.firstName} {m.lastName}
+                        {m.isChild && <span className="text-xs text-ink-faint ml-2">(child)</span>}
+                      </p>
+
+                      <div className="flex gap-3">
+                        {["coming", "not_coming"].map((status) => (
+                          <button
+                            key={status}
+                            onClick={() => {
+                              const arr = [...rsvpMembers];
+                              arr[i] = { ...arr[i], rsvpStatus: status };
+                              setRsvpMembers(arr);
+                            }}
+                            className={`flex-1 py-2 font-body text-[11px] tracking-[2px] uppercase transition-colors ${
+                              m.rsvpStatus === status
+                                ? status === "coming" ? "bg-gold text-white" : "bg-ink-soft text-white"
+                                : "border border-gold-pale text-ink-soft hover:border-gold"
+                            }`}
+                          >
+                            {status === "coming" ? "Joyfully Accept" : "Regretfully Decline"}
+                          </button>
+                        ))}
+                      </div>
+
+                      {m.rsvpStatus === "coming" && (
+                        <div className="space-y-2">
+                          <div>
+                            <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint mb-1">Dinner selection</p>
+                            <div className="flex gap-2">
+                              {[["salmon", "Salmon"], ["chicken_fettuccine", "Chicken Fettuccine"]].map(([val, label]) => (
+                                <button
+                                  key={val}
+                                  onClick={() => {
+                                    const arr = [...rsvpMembers];
+                                    arr[i] = { ...arr[i], foodChoice: val };
+                                    setRsvpMembers(arr);
+                                  }}
+                                  className={`flex-1 py-2 text-xs font-body tracking-[1px] uppercase transition-colors ${
+                                    m.foodChoice === val ? "bg-gold text-white" : "border border-gold-pale text-ink-soft hover:border-gold"
+                                  }`}
+                                >
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <input
+                            type="text"
+                            value={m.foodAllergies}
+                            onChange={(e) => {
+                              const arr = [...rsvpMembers];
+                              arr[i] = { ...arr[i], foodAllergies: e.target.value };
+                              setRsvpMembers(arr);
+                            }}
+                            placeholder="Food allergies (if any)"
+                            className={inputClass}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Plus one */}
+                  {guest.plusOneAllowed && (
+                    <div className="border border-gold-pale/40 p-4 space-y-3">
+                      <label className="flex items-center gap-2 font-body text-sm text-ink cursor-pointer">
+                        <input type="checkbox" checked={showPlusOne} onChange={(e) => setShowPlusOne(e.target.checked)} />
+                        I&apos;d like to bring a plus one
+                      </label>
+                      {showPlusOne && (
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <input type="text" value={plusOne.firstName} onChange={(e) => setPlusOne({ ...plusOne, firstName: e.target.value })} placeholder="First name" className={inputClass} />
+                            <input type="text" value={plusOne.lastName} onChange={(e) => setPlusOne({ ...plusOne, lastName: e.target.value })} placeholder="Last name" className={inputClass} />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <input type="text" value={plusOne.phone} onChange={(e) => setPlusOne({ ...plusOne, phone: e.target.value })} placeholder="Phone" className={inputClass} />
+                            <input type="text" value={plusOne.email} onChange={(e) => setPlusOne({ ...plusOne, email: e.target.value })} placeholder="Email" className={inputClass} />
+                          </div>
+                          <div>
+                            <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint mb-1">Dinner selection</p>
+                            <div className="flex gap-2">
+                              {[["salmon", "Salmon"], ["chicken_fettuccine", "Chicken Fettuccine"]].map(([val, label]) => (
+                                <button key={val} onClick={() => setPlusOne({ ...plusOne, foodChoice: val })} className={`flex-1 py-2 text-xs font-body tracking-[1px] uppercase transition-colors ${plusOne.foodChoice === val ? "bg-gold text-white" : "border border-gold-pale text-ink-soft hover:border-gold"}`}>
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <input type="text" value={plusOne.foodAllergies} onChange={(e) => setPlusOne({ ...plusOne, foodAllergies: e.target.value })} placeholder="Food allergies (if any)" className={inputClass} />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleRsvpSubmit}
+                    disabled={rsvpSubmitting || rsvpMembers.some((m) => !m.rsvpStatus)}
+                    className="w-full py-3.5 bg-gold text-white font-body font-normal text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors disabled:opacity-50"
+                  >
+                    {rsvpSubmitting ? "Submitting..." : "Submit RSVP"}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Travel Checklist */}
+          {(phase === "checklist" || phase === "final") && rsvpSubmitted && rsvpMembers.some((m) => m.rsvpStatus === "coming") && (
+            <div className="mt-8 animate-fadeUp animation-delay-700">
+              <div className="w-10 h-px bg-gold mx-auto mb-8" />
+
+              {checklistSubmitted ? (
+                <div className="py-4">
+                  <p className="font-body font-light text-sm text-ink-soft mb-1">
+                    Travel checklist submitted!
+                  </p>
+                  <p className="font-body font-light text-xs text-ink-faint">
+                    You can update it anytime by revisiting this page.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4 text-left">
+                  <p className="font-body font-light text-[11px] tracking-[2px] uppercase text-ink-soft text-center mb-4">
+                    Travel checklist
+                  </p>
+
+                  {/* Hotel */}
+                  <div className="border border-gold-pale/40 p-4 space-y-3">
+                    <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">Hotel</p>
+                    {roomBlockLink && (
+                      <a href={roomBlockLink} target="_blank" rel="noopener" className="block py-2.5 text-center bg-gold text-white font-body text-[11px] tracking-[2px] uppercase hover:bg-gold-light transition-colors">
+                        Book Your Room
+                      </a>
+                    )}
+                    <label className="flex items-center gap-2 font-body text-sm text-ink">
+                      <input type="checkbox" checked={checklist.hotelBooked} onChange={(e) => setChecklist({ ...checklist, hotelBooked: e.target.checked })} />
+                      I have booked my hotel
+                    </label>
+                    {checklist.hotelBooked && (
+                      <label className="flex items-center gap-2 font-body text-xs text-ink-soft ml-6">
+                        <input type="checkbox" checked={!checklist.hotelInRoomBlock} onChange={(e) => setChecklist({ ...checklist, hotelInRoomBlock: !e.target.checked })} />
+                        I booked outside the room block
+                      </label>
+                    )}
+                  </div>
+
+                  {/* Passport */}
+                  <div className="border border-gold-pale/40 p-4">
+                    <label className="flex items-center gap-2 font-body text-sm text-ink">
+                      <input type="checkbox" checked={checklist.passportConfirmed} onChange={(e) => setChecklist({ ...checklist, passportConfirmed: e.target.checked })} />
+                      I have a valid passport (expires after April 2027)
+                    </label>
+                  </div>
+
+                  {/* Flights */}
+                  <div className="border border-gold-pale/40 p-4 space-y-3">
+                    <label className="flex items-center gap-2 font-body text-sm text-ink">
+                      <input type="checkbox" checked={checklist.flightsBooked} onChange={(e) => setChecklist({ ...checklist, flightsBooked: e.target.checked })} />
+                      I have booked my flights
+                    </label>
+                    {checklist.flightsBooked && (
+                      <input type="text" value={checklist.flightDetails} onChange={(e) => setChecklist({ ...checklist, flightDetails: e.target.value })} placeholder="Flight number(s) and dates" className={inputClass} />
+                    )}
+                  </div>
+
+                  {/* Dates & Transport */}
+                  <div className="border border-gold-pale/40 p-4 space-y-3">
+                    <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">Travel dates</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <input type="date" value={checklist.arrivalDate} onChange={(e) => setChecklist({ ...checklist, arrivalDate: e.target.value })} className={inputClass} />
+                      <input type="date" value={checklist.departureDate} onChange={(e) => setChecklist({ ...checklist, departureDate: e.target.value })} className={inputClass} />
+                    </div>
+                    <label className="flex items-center gap-2 font-body text-sm text-ink">
+                      <input type="checkbox" checked={checklist.transportNeeded} onChange={(e) => setChecklist({ ...checklist, transportNeeded: e.target.checked })} />
+                      I need airport transportation
+                    </label>
+                  </div>
+
+                  {/* Emergency contact */}
+                  <div className="border border-gold-pale/40 p-4 space-y-3">
+                    <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">Emergency contact</p>
+                    <input type="text" value={checklist.emergencyContact} onChange={(e) => setChecklist({ ...checklist, emergencyContact: e.target.value })} placeholder="Name & phone number" className={inputClass} />
+                  </div>
+
+                  {/* Fun stuff */}
+                  <div className="border border-gold-pale/40 p-4 space-y-3">
+                    <input type="text" value={checklist.songRequest} onChange={(e) => setChecklist({ ...checklist, songRequest: e.target.value })} placeholder="Song request for the DJ" className={inputClass} />
+                    <textarea
+                      rows={3}
+                      value={checklist.messageToCouple}
+                      onChange={(e) => setChecklist({ ...checklist, messageToCouple: e.target.value })}
+                      placeholder="A message for Nathan & Lauren..."
+                      className={inputClass + " resize-none"}
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleChecklistSubmit}
+                    disabled={checklistSubmitting}
+                    className="w-full py-3.5 bg-gold text-white font-body font-normal text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors disabled:opacity-50"
+                  >
+                    {checklistSubmitting ? "Submitting..." : "Submit Checklist"}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Calendar buttons */}
           <div className="mt-8 animate-fadeUp animation-delay-800">

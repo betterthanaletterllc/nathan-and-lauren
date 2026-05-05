@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { guests, settings } from "@/lib/db/schema";
+import { guests, settings, householdMembers } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -54,6 +54,16 @@ export default async function GuestPage({ params }: Props) {
   const globalNote = config["global_note"] || "";
   const note = guest.note || globalNote;
   const showTable = config["show_table_numbers"] === "true";
+  const phase = config["guest_page_phase"] || "save_the_date";
+  const videoUrl = guest.videoUrl || config["global_video_url"] || "";
+  const roomBlockLink = config["room_block_link"] || "";
+
+  // Fetch household members
+  const members = await db
+    .select()
+    .from(householdMembers)
+    .where(eq(householdMembers.householdId, guest.id))
+    .orderBy(householdMembers.id);
 
   return (
     <GuestPageClient
@@ -62,8 +72,35 @@ export default async function GuestPage({ params }: Props) {
         name: guest.name,
         addressSubmitted: !!guest.addressSubmittedAt,
         tableNumber: showTable ? guest.tableNumber : null,
+        plusOneAllowed: guest.plusOneAllowed,
+        rsvpSubmitted: !!guest.rsvpSubmittedAt,
+        checklistSubmitted: !!guest.checklistSubmittedAt,
+        passportConfirmed: guest.passportConfirmed,
+        flightsBooked: guest.flightsBooked,
+        flightDetails: guest.flightDetails,
+        hotelBooked: guest.hotelBooked,
+        hotelInRoomBlock: guest.hotelInRoomBlock,
+        transportNeeded: guest.transportNeeded,
+        arrivalDate: guest.arrivalDate,
+        departureDate: guest.departureDate,
+        emergencyContact: guest.emergencyContact,
+        songRequest: guest.songRequest,
+        messageToCouple: guest.messageToCouple,
       }}
+      members={members.map((m) => ({
+        id: m.id,
+        firstName: m.firstName,
+        lastName: m.lastName,
+        rsvpStatus: m.rsvpStatus,
+        foodChoice: m.foodChoice,
+        foodAllergies: m.foodAllergies,
+        isChild: m.isChild,
+        isPlusOne: m.isPlusOne,
+      }))}
       note={note}
+      phase={phase}
+      videoUrl={videoUrl}
+      roomBlockLink={roomBlockLink}
     />
   );
 }
