@@ -533,12 +533,22 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
               {videoUrl && !rsvpSubmitted && (
                 <div className="mb-8">
                   <div className="aspect-video w-full">
-                    <iframe
-                      src={videoUrl.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/")}
-                      className="w-full h-full"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
+                    {videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be") ? (
+                      <iframe
+                        src={videoUrl.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/")}
+                        className="w-full h-full"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <video
+                        src={videoUrl}
+                        controls
+                        playsInline
+                        preload="metadata"
+                        className="w-full h-full object-cover bg-ink/5"
+                      />
+                    )}
                   </div>
                 </div>
               )}
