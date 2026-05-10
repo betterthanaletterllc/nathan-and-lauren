@@ -903,7 +903,6 @@ export default function DashboardClient() {
                                   </a>
                                 )}
                               </div>
-                              </div>
                             ))}
                             {g.members.length > 2 && <span className="text-[9px] text-ink-faint">+{g.members.length - 2} more</span>}
                           </div>
