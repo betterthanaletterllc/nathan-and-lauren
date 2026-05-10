@@ -974,86 +974,104 @@ export default function DashboardClient() {
         {/* GUEST MAP TAB */}
         {tab === "map" && (
           <div className="space-y-6">
-            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
-              <p className="font-body font-light text-[10px] tracking-[3px] uppercase text-ink-faint mb-4">
-                Guest locations
-              </p>
-              {(() => {
-                const withAddress = guests.filter((g) => g.city && g.state);
-                if (withAddress.length === 0) {
-                  return (
+            {(() => {
+              const withAddress = guests.filter((g) => g.addressLine1 && g.city && g.state);
+              if (withAddress.length === 0) {
+                return (
+                  <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
                     <p className="text-center py-8 text-ink-faint text-sm">
                       No addresses submitted yet. Locations will appear here as guests submit their addresses.
                     </p>
-                  );
-                }
-
-                // Group by state, then city
-                const byState: Record<string, { city: string; guests: typeof withAddress }[]> = {};
-                for (const g of withAddress) {
-                  const state = g.state || "Unknown";
-                  const city = g.city || "Unknown";
-                  if (!byState[state]) byState[state] = [];
-                  const existing = byState[state].find((c) => c.city === city);
-                  if (existing) {
-                    existing.guests.push(g);
-                  } else {
-                    byState[state].push({ city, guests: [g] });
-                  }
-                }
-
-                const sortedStates = Object.entries(byState).sort(
-                  (a, b) => b[1].reduce((s, c) => s + c.guests.length, 0) - a[1].reduce((s, c) => s + c.guests.length, 0)
-                );
-
-                return (
-                  <div className="space-y-4">
-                    {/* Summary */}
-                    <div className="grid grid-cols-3 gap-4 mb-6">
-                      <div className="bg-sand p-4 text-center">
-                        <p className="font-display text-2xl text-ink">{withAddress.length}</p>
-                        <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">Addresses in</p>
-                      </div>
-                      <div className="bg-sand p-4 text-center">
-                        <p className="font-display text-2xl text-ink">{Object.keys(byState).length}</p>
-                        <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">States</p>
-                      </div>
-                      <div className="bg-sand p-4 text-center">
-                        <p className="font-display text-2xl text-ink">{sortedStates.reduce((s, [, cities]) => s + cities.length, 0)}</p>
-                        <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">Cities</p>
-                      </div>
-                    </div>
-
-                    {/* By state */}
-                    {sortedStates.map(([state, cities]) => {
-                      const stateTotal = cities.reduce((s, c) => s + c.guests.length, 0);
-                      return (
-                        <div key={state} className="border-b border-sand-dark pb-3 last:border-0">
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="font-body text-sm font-medium text-ink">{state}</p>
-                            <span className="font-body text-xs text-ink-faint">
-                              {stateTotal} household{stateTotal !== 1 ? "s" : ""}
-                            </span>
-                          </div>
-                          {cities
-                            .sort((a, b) => b.guests.length - a.guests.length)
-                            .map(({ city, guests: cityGuests }) => (
-                              <div key={city} className="ml-4 flex items-center justify-between py-1">
-                                <p className="font-body text-sm text-ink-soft">{city}</p>
-                                <div className="flex items-center gap-3">
-                                  <span className="font-body text-xs text-ink-faint">
-                                    {cityGuests.map((g) => g.name).join(", ")}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      );
-                    })}
                   </div>
                 );
-              })()}
-            </div>
+              }
+
+              // Group by state, then city
+              const byState: Record<string, { city: string; guests: typeof withAddress }[]> = {};
+              for (const g of withAddress) {
+                const state = g.state || "Unknown";
+                const city = g.city || "Unknown";
+                if (!byState[state]) byState[state] = [];
+                const existing = byState[state].find((c) => c.city === city);
+                if (existing) {
+                  existing.guests.push(g);
+                } else {
+                  byState[state].push({ city, guests: [g] });
+                }
+              }
+
+              const sortedStates = Object.entries(byState).sort(
+                (a, b) => b[1].reduce((s, c) => s + c.guests.length, 0) - a[1].reduce((s, c) => s + c.guests.length, 0)
+              );
+
+              // Build Google Maps embed with all addresses
+              const allAddresses = withAddress.map((g) => 
+                encodeURIComponent(`${g.addressLine1}, ${g.city}, ${g.state} ${g.zip}`)
+              );
+
+              function getGoogleMapsUrl(g: typeof withAddress[0]) {
+                return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${g.addressLine1}, ${g.city}, ${g.state} ${g.zip}`)}`;
+              }
+
+              return (
+                <>
+                  {/* Summary */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-[#FFFDF9] border border-gold-pale/40 p-5 text-center">
+                      <p className="font-display text-2xl text-ink">{withAddress.length}</p>
+                      <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">Addresses in</p>
+                    </div>
+                    <div className="bg-[#FFFDF9] border border-gold-pale/40 p-5 text-center">
+                      <p className="font-display text-2xl text-ink">{Object.keys(byState).length}</p>
+                      <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">States</p>
+                    </div>
+                    <div className="bg-[#FFFDF9] border border-gold-pale/40 p-5 text-center">
+                      <p className="font-display text-2xl text-ink">{sortedStates.reduce((s, [, cities]) => s + cities.length, 0)}</p>
+                      <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">Cities</p>
+                    </div>
+                  </div>
+
+                  {/* Address list by state */}
+                  <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+                    <p className="font-body font-light text-[10px] tracking-[3px] uppercase text-ink-faint mb-4">
+                      All addresses
+                    </p>
+                    {sortedStates.map(([state, cities]) => (
+                      <div key={state} className="mb-4 last:mb-0">
+                        <p className="font-body text-sm font-medium text-ink mb-2">{state}</p>
+                        {cities.sort((a, b) => b.guests.length - a.guests.length).map(({ city, guests: cityGuests }) => (
+                          <div key={city}>
+                            {cityGuests.map((g) => (
+                              <div key={g.id} className="ml-4 py-2.5 border-b border-sand-dark last:border-0 flex items-start justify-between gap-4">
+                                <div>
+                                  <button
+                                    onClick={() => openHousehold(g)}
+                                    className="font-body text-sm font-medium text-ink hover:text-gold transition-colors"
+                                  >
+                                    {g.name}
+                                  </button>
+                                  <p className="font-body text-xs text-ink-soft mt-0.5">{g.addressLine1}</p>
+                                  {g.addressLine2 && <p className="font-body text-xs text-ink-soft">{g.addressLine2}</p>}
+                                  <p className="font-body text-xs text-ink-soft">{g.city}, {g.state} {g.zip}</p>
+                                </div>
+                                <a
+                                  href={getGoogleMapsUrl(g)}
+                                  target="_blank"
+                                  rel="noopener"
+                                  className="text-gold text-xs font-body hover:underline whitespace-nowrap shrink-0"
+                                >
+                                  View map
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
 
@@ -1448,7 +1466,16 @@ export default function DashboardClient() {
                 </div>
                 <div>
                   <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">Address</p>
-                  <p className="font-body text-sm text-ink mt-1">{editingGuest.addressSubmittedAt ? `${editingGuest.city}, ${editingGuest.state}` : "Not submitted"}</p>
+                  {editingGuest.addressSubmittedAt ? (
+                    <div className="mt-1">
+                      <p className="font-body text-sm text-ink">{editingGuest.addressLine1}</p>
+                      {editingGuest.addressLine2 && <p className="font-body text-sm text-ink">{editingGuest.addressLine2}</p>}
+                      <p className="font-body text-sm text-ink">{editingGuest.city}, {editingGuest.state} {editingGuest.zip}</p>
+                      {editingGuest.country && editingGuest.country !== "US" && <p className="font-body text-sm text-ink">{editingGuest.country}</p>}
+                    </div>
+                  ) : (
+                    <p className="font-body text-sm text-ink mt-1">Not submitted</p>
+                  )}
                 </div>
                 <div>
                   <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">RSVP</p>
