@@ -23,6 +23,8 @@ interface Member {
   attendingCeremony: boolean | null;
   attendingReception: boolean | null;
   attendingBrunch: boolean | null;
+  tableNumber: number | null;
+  seatNumber: number | null;
 }
 
 interface Guest {
@@ -347,7 +349,7 @@ export default function DashboardClient() {
   const [newName, setNewName] = useState("");
   const [newSide, setNewSide] = useState("");
   const [newMembers, setNewMembers] = useState<Member[]>([
-    { firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false, isPlusOne: false, rsvpStatus: null, foodChoice: null, foodAllergies: null, attendingWelcome: null, attendingCeremony: null, attendingReception: null, attendingBrunch: null },
+    { firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false, isPlusOne: false, rsvpStatus: null, foodChoice: null, foodAllergies: null, attendingWelcome: null, attendingCeremony: null, attendingReception: null, attendingBrunch: null, tableNumber: null, seatNumber: null },
   ]);
   const [addError, setAddError] = useState("");
 
@@ -372,7 +374,7 @@ export default function DashboardClient() {
     setEditTable(g.tableNumber?.toString() || "");
     setEditPlusOne(g.plusOneAllowed);
     setEditVideo(g.videoUrl || "");
-    setEditMembers(g.members?.length > 0 ? g.members.map((m) => ({ ...m })) : [{ firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false, isPlusOne: false, rsvpStatus: null, foodChoice: null, foodAllergies: null, attendingWelcome: null, attendingCeremony: null, attendingReception: null, attendingBrunch: null }]);
+    setEditMembers(g.members?.length > 0 ? g.members.map((m) => ({ ...m })) : [{ firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false, isPlusOne: false, rsvpStatus: null, foodChoice: null, foodAllergies: null, attendingWelcome: null, attendingCeremony: null, attendingReception: null, attendingBrunch: null, tableNumber: null, seatNumber: null }]);
     setEditDirty(false);
     setShowConfirm(false);
     setPendingClose(false);
@@ -745,7 +747,7 @@ export default function DashboardClient() {
                   ))}
                 </div>
                 <button
-                  onClick={() => setNewMembers([...newMembers, { firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false, isPlusOne: false, rsvpStatus: null, foodChoice: null, foodAllergies: null, attendingWelcome: null, attendingCeremony: null, attendingReception: null, attendingBrunch: null }])}
+                  onClick={() => setNewMembers([...newMembers, { firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false, isPlusOne: false, rsvpStatus: null, foodChoice: null, foodAllergies: null, attendingWelcome: null, attendingCeremony: null, attendingReception: null, attendingBrunch: null, tableNumber: null, seatNumber: null }])}
                   className="mt-2 text-gold text-xs font-body tracking-[1px] uppercase hover:underline"
                 >
                   + Add another member
@@ -763,7 +765,7 @@ export default function DashboardClient() {
                     addGuest(newName.trim(), newMembers.filter((m) => m.firstName || m.lastName), newSide);
                     setNewName("");
                     setNewSide("");
-                    setNewMembers([{ firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false, isPlusOne: false, rsvpStatus: null, foodChoice: null, foodAllergies: null, attendingWelcome: null, attendingCeremony: null, attendingReception: null, attendingBrunch: null }]);
+                    setNewMembers([{ firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false, isPlusOne: false, rsvpStatus: null, foodChoice: null, foodAllergies: null, attendingWelcome: null, attendingCeremony: null, attendingReception: null, attendingBrunch: null, tableNumber: null, seatNumber: null }]);
                   } else {
                     setAddError("Enter a household name");
                   }
@@ -1505,7 +1507,7 @@ export default function DashboardClient() {
                 <div className="flex items-center justify-between mb-3">
                   <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint">Members ({editMembers.length})</label>
                   <button
-                    onClick={() => { setEditMembers([...editMembers, { firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false, isPlusOne: false, rsvpStatus: null, foodChoice: null, foodAllergies: null, attendingWelcome: null, attendingCeremony: null, attendingReception: null, attendingBrunch: null }]); setEditDirty(true); }}
+                    onClick={() => { setEditMembers([...editMembers, { firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false, isPlusOne: false, rsvpStatus: null, foodChoice: null, foodAllergies: null, attendingWelcome: null, attendingCeremony: null, attendingReception: null, attendingBrunch: null, tableNumber: null, seatNumber: null }]); setEditDirty(true); }}
                     className="text-gold text-xs font-body tracking-[1px] uppercase hover:underline"
                   >
                     + Add member
