@@ -127,6 +127,23 @@ export async function PUT(req: NextRequest) {
             email: m.email || null,
             dietaryRestrictions: m.dietaryRestrictions || null,
             isChild: m.isChild || false,
+            isPlusOne: m.isPlusOne || false,
+            rsvpStatus: m.rsvpStatus || null,
+            foodChoice: m.foodChoice || null,
+            foodAllergies: m.foodAllergies || null,
+            attendingWelcome: m.attendingWelcome ?? null,
+            attendingCeremony: m.attendingCeremony ?? null,
+            attendingReception: m.attendingReception ?? null,
+            attendingBrunch: m.attendingBrunch ?? null,
+            passportConfirmed: m.passportConfirmed || false,
+            flightsBooked: m.flightsBooked || false,
+            departureDate: m.departureDate || null,
+            departureFlight: m.departureFlight || null,
+            returnDate: m.returnDate || null,
+            returnFlight: m.returnFlight || null,
+            hotelBooked: m.hotelBooked || false,
+            tableNumber: m.tableNumber ?? null,
+            seatNumber: m.seatNumber ?? null,
           }))
         );
       }

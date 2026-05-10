@@ -5,6 +5,7 @@ import { signOut } from "next-auth/react";
 import Papa from "papaparse";
 import VideoRecorder from "./VideoRecorder";
 import SeatingChart from "./SeatingChart";
+import GuestMap from "./GuestMap";
 
 // Types
 interface Member {
@@ -34,6 +35,7 @@ interface Guest {
   partySize: number;
   tableNumber: number | null;
   side: string | null;
+  tags: string[] | null;
   note: string | null;
   plusOneAllowed: boolean;
   videoUrl: string | null;
@@ -159,8 +161,16 @@ export default function DashboardClient() {
         (g) =>
           g.name.toLowerCase().includes(q) ||
           g.slug.toLowerCase().includes(q) ||
-          (g.city || "").toLowerCase().includes(q)
+          (g.city || "").toLowerCase().includes(q) ||
+          (g.tags || []).some((t) => t.toLowerCase().includes(q)) ||
+          (g.members || []).some((m: Member) =>
+            `${m.firstName} ${m.lastName}`.toLowerCase().includes(q) ||
+            (m.phone || "").includes(q)
+          )
       );
+    }
+    if (tagFilter) {
+      list = list.filter((g) => (g.tags || []).includes(tagFilter));
     }
     list.sort((a, b) => {
       let av: any, bv: any;
@@ -361,6 +371,8 @@ export default function DashboardClient() {
   const [editTable, setEditTable] = useState("");
   const [editPlusOne, setEditPlusOne] = useState(false);
   const [editVideo, setEditVideo] = useState("");
+  const [editTags, setEditTags] = useState<string[]>([]);
+  const [newTag, setNewTag] = useState("");
   const [editMembers, setEditMembers] = useState<Member[]>([]);
   const [editDirty, setEditDirty] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -374,6 +386,8 @@ export default function DashboardClient() {
     setEditTable(g.tableNumber?.toString() || "");
     setEditPlusOne(g.plusOneAllowed);
     setEditVideo(g.videoUrl || "");
+    setEditTags(g.tags || []);
+    setNewTag("");
     setEditMembers(g.members?.length > 0 ? g.members.map((m) => ({ ...m })) : [{ firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false, isPlusOne: false, rsvpStatus: null, foodChoice: null, foodAllergies: null, attendingWelcome: null, attendingCeremony: null, attendingReception: null, attendingBrunch: null, tableNumber: null, seatNumber: null }]);
     setEditDirty(false);
     setShowConfirm(false);
@@ -402,6 +416,7 @@ export default function DashboardClient() {
         tableNumber: parseInt(editTable) || null,
         plusOneAllowed: editPlusOne,
         videoUrl: editVideo || null,
+        tags: editTags.length > 0 ? editTags : null,
         members: editMembers.filter((m) => m.firstName || m.lastName),
       }),
     });
@@ -427,6 +442,16 @@ export default function DashboardClient() {
     "bg-[#FFFDF9] border border-gold-pale/40 p-5 text-center";
 
   const [drilldown, setDrilldown] = useState<string | null>(null);
+
+  // Tags
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    for (const g of guests) {
+      for (const t of (g.tags || [])) tagSet.add(t);
+    }
+    return Array.from(tagSet).sort();
+  }, [guests]);
+  const [tagFilter, setTagFilter] = useState("");
 
   if (loading) {
     return (
@@ -661,12 +686,24 @@ export default function DashboardClient() {
               <div className="flex-1 min-w-[200px]">
                 <input
                   type="text"
-                  placeholder="Search guests..."
+                  placeholder="Search guests, tags, phone..."
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
                   className="w-full px-4 py-2.5 bg-[#FFFDF9] border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
                 />
               </div>
+              {allTags.length > 0 && (
+                <select
+                  value={tagFilter}
+                  onChange={(e) => setTagFilter(e.target.value)}
+                  className="px-3 py-2.5 bg-[#FFFDF9] border border-gold-pale text-sm font-body font-light text-ink focus:outline-none focus:border-gold"
+                >
+                  <option value="">All tags</option>
+                  {allTags.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              )}
               <button
                 onClick={() => (window.location.href = "/api/guests/export")}
                 className="px-4 py-2.5 border border-gold-pale text-gold font-body text-[11px] tracking-[2px] uppercase hover:bg-[#FFFDF9] transition-colors"
@@ -784,6 +821,8 @@ export default function DashboardClient() {
                     {[
                       ["name", "Name"],
                       ["partySize", "Party"],
+                      ["phone", "Phone"],
+                      ["media", "Note/Video"],
                       ["tableNumber", "Table"],
                       ["opened", "Opened"],
                       ["submitted", "Address"],
@@ -817,8 +856,65 @@ export default function DashboardClient() {
                           <p className="text-xs text-ink-soft">{g.members.map((m: Member) => `${m.firstName} ${m.lastName}`.trim()).filter(Boolean).join(", ")}</p>
                         )}
                         <p className="text-xs text-ink-faint">/{g.slug}</p>
+                        {(g.tags || []).length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {(g.tags || []).map((t: string) => (
+                              <span key={t} className="px-1.5 py-0.5 bg-gold/10 text-gold text-[9px] font-body border border-gold/20">{t}</span>
+                            ))}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-ink-soft">{g.partySize}</td>
+                      <td className="px-4 py-3">
+                        {/* Phone - show first member's phone, inline editable */}
+                        {g.members && g.members.length > 0 ? (
+                          <div className="space-y-1">
+                            {g.members.slice(0, 2).map((m: Member, mi: number) => (
+                              <div key={mi} className="flex items-center gap-1">
+                                <span className="text-[9px] text-ink-faint w-12 truncate">{m.firstName}</span>
+                                <input
+                                  type="text"
+                                  defaultValue={m.phone || ""}
+                                  placeholder="—"
+                                  onBlur={(e) => {
+                                    if (e.target.value !== (m.phone || "") && m.id) {
+                                      fetch("/api/guests", {
+                                        method: "PUT",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({
+                                          id: g.id,
+                                          members: g.members.map((mem: Member) =>
+                                            mem.id === m.id ? { ...mem, phone: e.target.value } : mem
+                                          ),
+                                        }),
+                                      }).then(() => fetchAll());
+                                    }
+                                  }}
+                                  className="w-24 px-1.5 py-0.5 border border-gold-pale text-[10px] font-body text-ink focus:outline-none focus:border-gold"
+                                />
+                              </div>
+                            ))}
+                            {g.members.length > 2 && <span className="text-[9px] text-ink-faint">+{g.members.length - 2} more</span>}
+                          </div>
+                        ) : (
+                          <span className="text-ink-faint text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {/* Note & Video indicators */}
+                        <div className="flex items-center gap-2">
+                          {g.note ? (
+                            <span className="text-green-600 text-xs" title={g.note}>💬</span>
+                          ) : (
+                            <button onClick={() => openHousehold(g)} className="text-ink-faint text-xs hover:text-gold" title="Add note">💬</button>
+                          )}
+                          {g.videoUrl ? (
+                            <span className="text-green-600 text-xs" title="Video uploaded">🎥</span>
+                          ) : (
+                            <button onClick={() => openHousehold(g)} className="text-ink-faint text-xs hover:text-gold" title="Add video">🎥</button>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-4 py-3">
                         <input
                           type="number"
@@ -974,6 +1070,16 @@ export default function DashboardClient() {
         {/* GUEST MAP TAB */}
         {tab === "map" && (
           <div className="space-y-6">
+            {/* Map with pins */}
+            <GuestMap
+              guests={guests.filter((g) => g.addressLine1 && g.city && g.state).map((g) => ({
+                name: g.name,
+                address: g.addressLine1 || "",
+                city: g.city || "",
+                state: g.state || "",
+              }))}
+            />
+
             {(() => {
               const withAddress = guests.filter((g) => g.addressLine1 && g.city && g.state);
               if (withAddress.length === 0) {
@@ -1445,6 +1551,56 @@ export default function DashboardClient() {
                   <input type="checkbox" checked={editPlusOne} onChange={(e) => { setEditPlusOne(e.target.checked); setEditDirty(true); }} />
                   Plus-one allowed
                 </label>
+              </div>
+
+              {/* Tags */}
+              <div>
+                <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-2">Tags</label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {editTags.map((tag) => (
+                    <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 bg-gold/10 text-gold text-xs font-body border border-gold/20">
+                      {tag}
+                      <button onClick={() => { setEditTags(editTags.filter((t) => t !== tag)); setEditDirty(true); }} className="hover:text-red-500 text-[10px]">&times;</button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newTag.trim()) {
+                        e.preventDefault();
+                        if (!editTags.includes(newTag.trim())) {
+                          setEditTags([...editTags, newTag.trim()]);
+                          setEditDirty(true);
+                        }
+                        setNewTag("");
+                      }
+                    }}
+                    placeholder="Add tag..."
+                    list="tag-suggestions"
+                    className="flex-1 px-3 py-1.5 border border-gold-pale text-xs font-body text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
+                  />
+                  <datalist id="tag-suggestions">
+                    {allTags.filter((t) => !editTags.includes(t)).map((t) => (
+                      <option key={t} value={t} />
+                    ))}
+                  </datalist>
+                  <button
+                    onClick={() => {
+                      if (newTag.trim() && !editTags.includes(newTag.trim())) {
+                        setEditTags([...editTags, newTag.trim()]);
+                        setEditDirty(true);
+                        setNewTag("");
+                      }
+                    }}
+                    className="px-3 py-1.5 text-gold text-xs font-body border border-gold-pale hover:bg-sand"
+                  >
+                    + Add
+                  </button>
+                </div>
               </div>
 
               <VideoRecorder

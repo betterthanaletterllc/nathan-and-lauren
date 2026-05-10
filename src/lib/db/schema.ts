@@ -16,6 +16,7 @@ export const guests = pgTable("guests", {
   partySize: integer("party_size").notNull().default(1),
   tableNumber: integer("table_number"),
   side: varchar("side", { length: 20 }), // 'bride' | 'groom' | 'both'
+  tags: jsonb("tags").$type<string[]>(), // array of tag strings
   note: text("note"),
   plusOneAllowed: boolean("plus_one_allowed").notNull().default(false),
   videoUrl: text("video_url"), // personalized video for RSVP phase
