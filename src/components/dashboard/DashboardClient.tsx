@@ -5,7 +5,7 @@ import { signOut } from "next-auth/react";
 import Papa from "papaparse";
 import VideoRecorder from "./VideoRecorder";
 import SeatingChart from "./SeatingChart";
-import GuestMap from "./GuestMap";
+// import GuestMap from "./GuestMap";
 
 // Types
 interface Member {
@@ -1071,8 +1071,8 @@ export default function DashboardClient() {
         {/* GUEST MAP TAB */}
         {tab === "map" && (
           <div className="space-y-6">
-            {/* Map with pins */}
-            {(() => {
+            {/* Map with pins - temporarily disabled */}
+            {/* {(() => {
               try {
                 const mapGuests = guests.filter((g) => g.addressLine1 && g.city && g.state).map((g) => ({
                   name: g.name,
@@ -1082,7 +1082,7 @@ export default function DashboardClient() {
                 }));
                 return mapGuests.length > 0 ? <GuestMap guests={mapGuests} /> : null;
               } catch { return null; }
-            })()}
+            })()} */}
 
             {(() => {
               const withAddress = guests.filter((g) => g.addressLine1 && g.city && g.state);
