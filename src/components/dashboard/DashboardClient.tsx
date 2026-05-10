@@ -162,7 +162,7 @@ export default function DashboardClient() {
           g.name.toLowerCase().includes(q) ||
           g.slug.toLowerCase().includes(q) ||
           (g.city || "").toLowerCase().includes(q) ||
-          (g.tags || []).some((t) => t.toLowerCase().includes(q)) ||
+          ((Array.isArray(g.tags) ? g.tags : []) as string[]).some((t) => t.toLowerCase().includes(q)) ||
           (g.members || []).some((m: Member) =>
             `${m.firstName} ${m.lastName}`.toLowerCase().includes(q) ||
             (m.phone || "").includes(q)
@@ -170,7 +170,7 @@ export default function DashboardClient() {
       );
     }
     if (tagFilter) {
-      list = list.filter((g) => (g.tags || []).includes(tagFilter));
+      list = list.filter((g) => ((Array.isArray(g.tags) ? g.tags : []) as string[]).includes(tagFilter));
     }
     list.sort((a, b) => {
       let av: any, bv: any;
@@ -386,7 +386,7 @@ export default function DashboardClient() {
     setEditTable(g.tableNumber?.toString() || "");
     setEditPlusOne(g.plusOneAllowed);
     setEditVideo(g.videoUrl || "");
-    setEditTags(g.tags || []);
+    setEditTags((Array.isArray(g.tags) ? g.tags : []) as string[]);
     setNewTag("");
     setEditMembers(g.members?.length > 0 ? g.members.map((m) => ({ ...m })) : [{ firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false, isPlusOne: false, rsvpStatus: null, foodChoice: null, foodAllergies: null, attendingWelcome: null, attendingCeremony: null, attendingReception: null, attendingBrunch: null, tableNumber: null, seatNumber: null }]);
     setEditDirty(false);
@@ -447,7 +447,8 @@ export default function DashboardClient() {
   const allTags = useMemo(() => {
     const tagSet = new Set<string>();
     for (const g of guests) {
-      for (const t of (g.tags || [])) tagSet.add(t);
+      const tags = Array.isArray(g.tags) ? g.tags : [];
+      for (const t of tags) tagSet.add(t);
     }
     return Array.from(tagSet).sort();
   }, [guests]);
@@ -856,9 +857,9 @@ export default function DashboardClient() {
                           <p className="text-xs text-ink-soft">{g.members.map((m: Member) => `${m.firstName} ${m.lastName}`.trim()).filter(Boolean).join(", ")}</p>
                         )}
                         <p className="text-xs text-ink-faint">/{g.slug}</p>
-                        {(g.tags || []).length > 0 && (
+                        {((Array.isArray(g.tags) ? g.tags : []) as string[]).length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1">
-                            {(g.tags || []).map((t: string) => (
+                            {((Array.isArray(g.tags) ? g.tags : []) as string[]).map((t: string) => (
                               <span key={t} className="px-1.5 py-0.5 bg-gold/10 text-gold text-[9px] font-body border border-gold/20">{t}</span>
                             ))}
                           </div>
@@ -1071,14 +1072,17 @@ export default function DashboardClient() {
         {tab === "map" && (
           <div className="space-y-6">
             {/* Map with pins */}
-            <GuestMap
-              guests={guests.filter((g) => g.addressLine1 && g.city && g.state).map((g) => ({
-                name: g.name,
-                address: g.addressLine1 || "",
-                city: g.city || "",
-                state: g.state || "",
-              }))}
-            />
+            {(() => {
+              try {
+                const mapGuests = guests.filter((g) => g.addressLine1 && g.city && g.state).map((g) => ({
+                  name: g.name,
+                  address: g.addressLine1 || "",
+                  city: g.city || "",
+                  state: g.state || "",
+                }));
+                return mapGuests.length > 0 ? <GuestMap guests={mapGuests} /> : null;
+              } catch { return null; }
+            })()}
 
             {(() => {
               const withAddress = guests.filter((g) => g.addressLine1 && g.city && g.state);
