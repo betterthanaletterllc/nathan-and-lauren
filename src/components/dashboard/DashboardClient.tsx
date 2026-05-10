@@ -5,7 +5,7 @@ import { signOut } from "next-auth/react";
 import Papa from "papaparse";
 import VideoRecorder from "./VideoRecorder";
 import SeatingChart from "./SeatingChart";
-// import GuestMap from "./GuestMap";
+// // import GuestMap from "./GuestMap";
 
 // Types
 interface Member {
