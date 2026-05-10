@@ -914,9 +914,9 @@ export default function DashboardClient() {
                         {/* Note & Video indicators */}
                         <div className="flex items-center gap-2">
                           {g.note ? (
-                            <span className="text-green-600 text-xs" title={g.note}>💬</span>
+                            <span className="text-green-600 text-xs" title={g.note}>📝</span>
                           ) : (
-                            <button onClick={() => openHousehold(g)} className="text-ink-faint text-xs hover:text-gold" title="Add note">💬</button>
+                            <button onClick={() => openHousehold(g)} className="text-ink-faint text-xs hover:text-gold" title="Add note">📝</button>
                           )}
                           {g.videoUrl ? (
                             <span className="text-green-600 text-xs" title="Video uploaded">🎥</span>
