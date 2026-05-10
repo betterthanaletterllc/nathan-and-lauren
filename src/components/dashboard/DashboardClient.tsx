@@ -893,6 +893,16 @@ export default function DashboardClient() {
                                   }}
                                   className="w-24 px-1.5 py-0.5 border border-gold-pale text-[10px] font-body text-ink focus:outline-none focus:border-gold"
                                 />
+                                {m.phone && (
+                                  <a
+                                    href={`sms:${m.phone}?&body=${encodeURIComponent(`${baseUrl}/guest/${g.slug}`)}`}
+                                    className="text-gold text-[10px] hover:text-gold-light shrink-0"
+                                    title="Send link via text"
+                                  >
+                                    💬
+                                  </a>
+                                )}
+                              </div>
                               </div>
                             ))}
                             {g.members.length > 2 && <span className="text-[9px] text-ink-faint">+{g.members.length - 2} more</span>}
