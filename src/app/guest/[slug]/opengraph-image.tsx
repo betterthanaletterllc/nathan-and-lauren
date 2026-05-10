@@ -1,12 +1,19 @@
 import { ImageResponse } from "@vercel/og";
 import { db } from "@/lib/db";
-import { guests } from "@/lib/db/schema";
+import { guests, householdMembers } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 export const runtime = "edge";
 export const alt = "Nathan & Lauren — Save the Date";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+
+function formatNames(names: string[]): string {
+  if (names.length === 0) return "You're Invited";
+  if (names.length === 1) return names[0];
+  if (names.length === 2) return `${names[0]} & ${names[1]}`;
+  return names.slice(0, -1).join(", ") + ", & " + names[names.length - 1];
+}
 
 export default async function Image({ params }: { params: { slug: string } }) {
   const [guest] = await db
@@ -15,8 +22,16 @@ export default async function Image({ params }: { params: { slug: string } }) {
     .where(eq(guests.slug, params.slug))
     .limit(1);
 
-  const guestName = guest?.name || "You're Invited";
-  const firstName = guestName.split(/\s*&\s*|\s+and\s+/i)[0].trim();
+  let displayName = "You're Invited";
+  if (guest) {
+    const members = await db
+      .select({ firstName: householdMembers.firstName })
+      .from(householdMembers)
+      .where(eq(householdMembers.householdId, guest.id))
+      .orderBy(householdMembers.id);
+    const names = members.map((m) => m.firstName).filter(Boolean);
+    displayName = names.length > 0 ? formatNames(names) : guest.name;
+  }
 
   return new ImageResponse(
     (
@@ -60,7 +75,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
               margin: "0 0 16px",
             }}
           >
-            {firstName}, you&apos;re invited!
+            {displayName}, you&apos;re invited!
           </p>
           <p
             style={{

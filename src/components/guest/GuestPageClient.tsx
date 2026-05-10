@@ -24,6 +24,7 @@ interface Props {
   guest: {
     slug: string;
     name: string;
+    displayName: string;
     addressSubmitted: boolean;
     tableNumber: number | null;
     plusOneAllowed: boolean;
@@ -181,7 +182,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
     }).catch(() => {});
   }, [guest.slug]);
 
-  const firstName = guest.name.split(/\s*&\s*|\s+and\s+/i)[0].trim();
+  const firstName = guest.displayName;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

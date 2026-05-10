@@ -29,17 +29,34 @@ async function getSettings() {
   return map;
 }
 
+function formatFirstNames(memberNames: string[]): string {
+  if (memberNames.length === 0) return "";
+  if (memberNames.length === 1) return memberNames[0];
+  if (memberNames.length === 2) return `${memberNames[0]} & ${memberNames[1]}`;
+  return memberNames.slice(0, -1).join(", ") + ", & " + memberNames[memberNames.length - 1];
+}
+
+async function getMemberNames(guestId: number): Promise<string[]> {
+  const members = await db
+    .select({ firstName: householdMembers.firstName })
+    .from(householdMembers)
+    .where(eq(householdMembers.householdId, guestId))
+    .orderBy(householdMembers.id);
+  return members.map((m) => m.firstName).filter(Boolean);
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const guest = await getGuest(params.slug);
   if (!guest) return { title: "Not Found" };
 
-  const firstName = guest.name.split(/\s*&\s*|\s+and\s+/i)[0].trim();
+  const memberNames = await getMemberNames(guest.id);
+  const displayName = memberNames.length > 0 ? formatFirstNames(memberNames) : guest.name.split(/\s*&\s*|\s+and\s+/i)[0].trim();
 
   return {
-    title: `${firstName}, Save the Date! — Nathan & Lauren`,
+    title: `${displayName}, Save the Date! — Nathan & Lauren`,
     description: `You're invited to celebrate Nathan & Lauren's wedding · February 26, 2027 · Riviera Cancún, Mexico`,
     openGraph: {
-      title: `${firstName}, Save the Date!`,
+      title: `${displayName}, Save the Date!`,
       description: `Nathan & Lauren are getting married · February 26, 2027 · Riviera Cancún, Mexico`,
       type: "website",
     },
@@ -72,11 +89,15 @@ export default async function GuestPage({ params }: Props) {
     .where(eq(householdMembers.householdId, guest.id))
     .orderBy(householdMembers.id);
 
+  const memberNames = members.map((m) => m.firstName).filter(Boolean);
+  const displayName = memberNames.length > 0 ? formatFirstNames(memberNames) : guest.name;
+
   return (
     <GuestPageClient
       guest={{
         slug: guest.slug,
         name: guest.name,
+        displayName,
         addressSubmitted: !!guest.addressSubmittedAt,
         tableNumber: showTable ? guest.tableNumber : null,
         plusOneAllowed: guest.plusOneAllowed,
