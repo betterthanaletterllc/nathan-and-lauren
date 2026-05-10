@@ -1059,14 +1059,18 @@ export default function DashboardClient() {
         {tab === "seating" && (
           <SeatingChart
             guests={guests}
-            onSave={async (updates) => {
-              for (const u of updates) {
-                await fetch("/api/guests", {
-                  method: "PUT",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ id: u.id, tableNumber: u.tableNumber }),
-                });
-              }
+            onSave={async (assignments) => {
+              await fetch("/api/seating", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  assignments: assignments.map((a) => ({
+                    memberId: a.memberId,
+                    tableNumber: a.tableNum,
+                    seatNumber: a.seatNum,
+                  })),
+                }),
+              });
               fetchAll();
             }}
           />

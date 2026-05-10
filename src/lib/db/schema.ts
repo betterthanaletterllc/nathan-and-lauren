@@ -86,6 +86,8 @@ export const householdMembers = pgTable("household_members", {
   returnDate: text("return_date"),
   returnFlight: text("return_flight"),
   hotelBooked: boolean("hotel_booked").notNull().default(false),
+  tableNumber: integer("table_number"),
+  seatNumber: integer("seat_number"),
 
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
