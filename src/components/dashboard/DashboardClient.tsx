@@ -152,6 +152,17 @@ export default function DashboardClient() {
       .sort((a, b) => b.daysSince - a.daysSince);
   }, [guests, threshold]);
 
+  // Tags
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    for (const g of guests) {
+      const tags = Array.isArray(g.tags) ? g.tags : [];
+      for (const t of tags) tagSet.add(t);
+    }
+    return Array.from(tagSet).sort();
+  }, [guests]);
+  const [tagFilter, setTagFilter] = useState("");
+
   // Sorted & filtered guest list
   const filteredGuests = useMemo(() => {
     let list = [...guests];
@@ -442,17 +453,6 @@ export default function DashboardClient() {
     "bg-[#FFFDF9] border border-gold-pale/40 p-5 text-center";
 
   const [drilldown, setDrilldown] = useState<string | null>(null);
-
-  // Tags
-  const allTags = useMemo(() => {
-    const tagSet = new Set<string>();
-    for (const g of guests) {
-      const tags = Array.isArray(g.tags) ? g.tags : [];
-      for (const t of tags) tagSet.add(t);
-    }
-    return Array.from(tagSet).sort();
-  }, [guests]);
-  const [tagFilter, setTagFilter] = useState("");
 
   if (loading) {
     return (
