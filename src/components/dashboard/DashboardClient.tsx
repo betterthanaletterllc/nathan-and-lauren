@@ -1012,28 +1012,48 @@ export default function DashboardClient() {
                   {nudgeGuests.map((g) => (
                     <div
                       key={g.id}
-                      className={`flex items-center justify-between py-3 border-b border-sand-dark last:border-0 ${
+                      className={`py-3 border-b border-sand-dark last:border-0 ${
                         g.daysSince >= threshold ? "bg-red-50/50" : ""
                       }`}
                     >
-                      <div className="flex-1">
-                        <p className="font-body text-sm font-medium text-ink">
+                      <div className="flex items-center justify-between mb-1">
+                        <button onClick={() => openHousehold(g)} className="font-body text-sm font-medium text-ink hover:text-gold transition-colors">
                           {g.name}
-                        </p>
-                        <p className="font-body text-xs text-ink-faint">
-                          {g.firstOpenedAt
-                            ? `Opened ${fmtDate(g.firstOpenedAt)}`
-                            : "Has not opened link"}
-                          {" · "}
-                          {g.daysSince} days since added
-                        </p>
+                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => copyLink(g.slug)}
+                            className="px-3 py-1 border border-gold-pale text-gold font-body text-[10px] tracking-[2px] uppercase hover:bg-sand transition-colors"
+                          >
+                            Copy link
+                          </button>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => copyLink(g.slug)}
-                        className="px-4 py-1.5 border border-gold-pale text-gold font-body text-[10px] tracking-[2px] uppercase hover:bg-sand transition-colors ml-4"
-                      >
-                        Copy link
-                      </button>
+                      <p className="font-body text-xs text-ink-faint mb-2">
+                        {g.firstOpenedAt
+                          ? `Opened ${fmtDate(g.firstOpenedAt)}`
+                          : "Has not opened link"}
+                        {" · "}
+                        {g.daysSince} days since added
+                      </p>
+                      {/* Members */}
+                      <div className="ml-2 space-y-1">
+                        {(g.members || []).map((m: Member, mi: number) => (
+                          <div key={mi} className="flex items-center gap-2 text-xs font-body text-ink-soft">
+                            <span className="min-w-[120px]">{m.firstName} {m.lastName}</span>
+                            <span className="text-ink-faint">{m.phone || "no phone"}</span>
+                            {m.phone && (
+                              <a
+                                href={`sms:${m.phone}`}
+                                className="text-gold hover:text-gold-light"
+                                title={`Text ${m.firstName}`}
+                              >
+                                💬
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
