@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { signOut } from "next-auth/react";
 import Papa from "papaparse";
 import VideoRecorder from "./VideoRecorder";
+import SeatingChart from "./SeatingChart";
 
 // Types
 interface Member {
@@ -70,7 +71,7 @@ interface Activity {
   guestSlug: string | null;
 }
 
-type Tab = "overview" | "guests" | "nudge" | "activity" | "map" | "settings";
+type Tab = "overview" | "guests" | "nudge" | "activity" | "map" | "seating" | "settings";
 
 export default function DashboardClient() {
   const [guests, setGuests] = useState<Guest[]>([]);
@@ -464,6 +465,7 @@ export default function DashboardClient() {
             ["nudge", "Nudge List"],
             ["activity", "Activity"],
             ["map", "Guest Map"],
+            ["seating", "Seating Chart"],
             ["settings", "Settings"],
           ] as [Tab, string][]
         ).map(([t, label]) => (
@@ -1051,6 +1053,23 @@ export default function DashboardClient() {
               })()}
             </div>
           </div>
+        )}
+
+        {/* SEATING CHART TAB */}
+        {tab === "seating" && (
+          <SeatingChart
+            guests={guests}
+            onSave={async (updates) => {
+              for (const u of updates) {
+                await fetch("/api/guests", {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ id: u.id, tableNumber: u.tableNumber }),
+                });
+              }
+              fetchAll();
+            }}
+          />
         )}
 
         {/* SETTINGS TAB */}
