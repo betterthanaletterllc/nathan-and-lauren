@@ -16,7 +16,7 @@ interface Guest {
   id: number;
   name: string;
   members: {
-    id: number;
+    id?: number;
     firstName: string;
     lastName: string;
     isChild: boolean;
@@ -55,8 +55,9 @@ export default function SeatingChart({ guests, onSave }: Props) {
       for (const m of (g.members || [])) {
         // Only include confirmed guests (coming or no RSVP yet)
         if (m.rsvpStatus === "not_coming") continue;
+        if (!m.id) continue;
         members.push({
-          id: m.id!,
+          id: m.id,
           firstName: m.firstName,
           lastName: m.lastName,
           householdName: g.name,
