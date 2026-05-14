@@ -934,23 +934,33 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
           )}
 
           {/* Calendar buttons */}
-          <div className="mt-8 animate-fadeUp animation-delay-800">
-            <p className="font-body font-light text-[11px] tracking-[2px] uppercase text-ink-faint mb-3">
-              Add to your calendar
-            </p>
-            <div className="flex justify-center gap-3">
-              <button
-                onClick={() => handleCalendar("google")}
-                className="px-5 py-2.5 border border-gold-pale text-gold font-body text-[11px] tracking-[2px] uppercase hover:bg-sand hover:border-gold transition-colors"
-              >
-                Google
-              </button>
-              <button
-                onClick={() => handleCalendar("ics")}
-                className="px-5 py-2.5 border border-gold-pale text-gold font-body text-[11px] tracking-[2px] uppercase hover:bg-sand hover:border-gold transition-colors"
-              >
-                Apple / Outlook
-              </button>
+          <div className="mt-10 mb-2 animate-fadeUp animation-delay-800">
+            <div className="border border-gold/30 bg-gold/5 p-6 text-center">
+              {/* Calendar icon */}
+              <div className="w-12 h-12 mx-auto mb-3 border border-gold/40 flex flex-col items-center justify-center">
+                <span className="font-body text-[8px] tracking-[2px] uppercase text-gold leading-none">Feb</span>
+                <span className="font-display text-lg text-ink leading-tight">26</span>
+              </div>
+              <p className="font-display italic text-lg text-ink mb-1">
+                Don&apos;t forget to save the date
+              </p>
+              <p className="font-body font-light text-xs text-ink-soft mb-5">
+                Add our wedding to your calendar so you don&apos;t miss it
+              </p>
+              <div className="flex justify-center gap-3">
+                <button
+                  onClick={() => handleCalendar("google")}
+                  className="flex-1 max-w-[180px] py-3 bg-gold text-white font-body text-[11px] tracking-[3px] uppercase hover:bg-gold-light transition-colors"
+                >
+                  Google Calendar
+                </button>
+                <button
+                  onClick={() => handleCalendar("ics")}
+                  className="flex-1 max-w-[180px] py-3 border-2 border-gold text-gold font-body text-[11px] tracking-[3px] uppercase hover:bg-gold hover:text-white transition-colors"
+                >
+                  Apple / Outlook
+                </button>
+              </div>
             </div>
           </div>
         </div>
