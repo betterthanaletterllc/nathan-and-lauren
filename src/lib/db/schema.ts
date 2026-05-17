@@ -48,6 +48,7 @@ export const guests = pgTable("guests", {
 
   // Tracking
   linkSentAt: timestamp("link_sent_at", { withTimezone: true }),
+  linkTexted: boolean("link_texted").notNull().default(false),
   firstOpenedAt: timestamp("first_opened_at", { withTimezone: true }),
   openCount: integer("open_count").notNull().default(0),
   addressSubmittedAt: timestamp("address_submitted_at", { withTimezone: true }),

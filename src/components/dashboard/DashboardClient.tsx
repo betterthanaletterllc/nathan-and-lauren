@@ -59,6 +59,7 @@ interface Guest {
   messageToCouple: string | null;
   checklistSubmittedAt: string | null;
   linkSentAt: string | null;
+  linkTexted: boolean;
   firstOpenedAt: string | null;
   openCount: number;
   addressSubmittedAt: string | null;
@@ -133,7 +134,10 @@ export default function DashboardClient() {
     const passports = guests.filter((g) => g.passportConfirmed).length;
     const flights = guests.filter((g) => g.flightsBooked).length;
     const hotels = guests.filter((g) => g.hotelBooked).length;
-    return { total, opened, submitted, outstanding, headcount, kids, rsvpYes, rsvpNo, rsvpPending, passports, flights, hotels };
+    const texted = guests.filter((g) => g.linkTexted).length;
+    const withNote = guests.filter((g) => g.note).length;
+    const withVideo = guests.filter((g) => g.videoUrl).length;
+    return { total, opened, submitted, outstanding, headcount, kids, rsvpYes, rsvpNo, rsvpPending, passports, flights, hotels, texted, withNote, withVideo };
   }, [guests]);
 
   // Nudge list
@@ -539,9 +543,9 @@ export default function DashboardClient() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
                 ["Addresses In", `${stats.submitted}/${stats.total}`],
-                ["Passports", `${stats.passports}/${stats.total}`],
-                ["Flights", `${stats.flights}/${stats.total}`],
-                ["Hotels", `${stats.hotels}/${stats.total}`],
+                ["Texted", `${stats.texted}/${stats.total}`],
+                ["Notes", `${stats.withNote}/${stats.total}`],
+                ["Videos", `${stats.withVideo}/${stats.total}`],
               ].map(([label, val]) => (
                 <button
                   key={label as string}
@@ -593,6 +597,15 @@ export default function DashboardClient() {
                         break;
                       case "Addresses In":
                         filtered = guests.filter((g) => g.addressSubmittedAt).map((g) => ({ household: g.name, slug: g.slug, names: `${g.city}, ${g.state}` }));
+                        break;
+                      case "Texted":
+                        filtered = guests.filter((g) => g.linkTexted).map((g) => ({ household: g.name, slug: g.slug, names: "Texted" }));
+                        break;
+                      case "Notes":
+                        filtered = guests.filter((g) => g.note).map((g) => ({ household: g.name, slug: g.slug, names: g.note || "", detail: "📝" }));
+                        break;
+                      case "Videos":
+                        filtered = guests.filter((g) => g.videoUrl).map((g) => ({ household: g.name, slug: g.slug, names: "Video uploaded", detail: "🎥" }));
                         break;
                       case "Passports":
                         filtered = guests.filter((g) => g.passportConfirmed).map((g) => ({ household: g.name, slug: g.slug, names: "Confirmed" }));
@@ -822,10 +835,10 @@ export default function DashboardClient() {
                     {[
                       ["name", "Name"],
                       ["partySize", "Party"],
+                      ["texted", "Texted"],
                       ["phone", "Phone"],
-                      ["media", "Note/Video"],
+                      ["media", "📝 / 🎥"],
                       ["tableNumber", "Table"],
-                      ["opened", "Opened"],
                       ["submitted", "Address"],
                     ].map(([key, label]) => (
                       <th
@@ -866,6 +879,21 @@ export default function DashboardClient() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-ink-soft">{g.partySize}</td>
+                      <td className="px-4 py-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={g.linkTexted || false}
+                          onChange={() => {
+                            fetch("/api/guests", {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ id: g.id, linkTexted: !g.linkTexted }),
+                            }).then(() => fetchAll());
+                          }}
+                          className="cursor-pointer"
+                          title={g.linkTexted ? "Texted" : "Not texted yet"}
+                        />
+                      </td>
                       <td className="px-4 py-3">
                         {/* Phone - show first member's phone, inline editable */}
                         {g.members && g.members.length > 0 ? (
@@ -912,17 +940,21 @@ export default function DashboardClient() {
                       </td>
                       <td className="px-4 py-3">
                         {/* Note & Video indicators */}
-                        <div className="flex items-center gap-2">
-                          {g.note ? (
-                            <span className="text-green-600 text-xs" title={g.note}>📝</span>
-                          ) : (
-                            <button onClick={() => openHousehold(g)} className="text-ink-faint text-xs hover:text-gold" title="Add note">📝</button>
-                          )}
-                          {g.videoUrl ? (
-                            <span className="text-green-600 text-xs" title="Video uploaded">🎥</span>
-                          ) : (
-                            <button onClick={() => openHousehold(g)} className="text-ink-faint text-xs hover:text-gold" title="Add video">🎥</button>
-                          )}
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => openHousehold(g)}
+                            className={`text-xs font-body flex items-center gap-1 ${g.note ? "text-green-600" : "text-ink-faint/40 hover:text-gold"}`}
+                            title={g.note ? `Note: ${g.note}` : "Add note"}
+                          >
+                            📝{g.note ? "✓" : ""}
+                          </button>
+                          <button
+                            onClick={() => openHousehold(g)}
+                            className={`text-xs font-body flex items-center gap-1 ${g.videoUrl ? "text-green-600" : "text-ink-faint/40 hover:text-gold"}`}
+                            title={g.videoUrl ? "Video uploaded" : "Add video"}
+                          >
+                            🎥{g.videoUrl ? "✓" : ""}
+                          </button>
                         </div>
                       </td>
                       <td className="px-4 py-3">
