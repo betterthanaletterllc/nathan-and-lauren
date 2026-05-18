@@ -388,6 +388,8 @@ export default function DashboardClient() {
   const [editVideo, setEditVideo] = useState("");
   const [editTags, setEditTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
+  const [editSlug, setEditSlug] = useState("");
+  const [showSlugConfirm, setShowSlugConfirm] = useState(false);
   const [editMembers, setEditMembers] = useState<Member[]>([]);
   const [editDirty, setEditDirty] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -403,6 +405,7 @@ export default function DashboardClient() {
     setEditVideo(g.videoUrl || "");
     setEditTags((Array.isArray(g.tags) ? g.tags : []) as string[]);
     setNewTag("");
+    setEditSlug(g.slug);
     setEditMembers(g.members?.length > 0 ? g.members.map((m) => ({ ...m })) : [{ firstName: "", lastName: "", phone: "", email: "", dietaryRestrictions: "", isChild: false, isPlusOne: false, rsvpStatus: null, foodChoice: null, foodAllergies: null, attendingWelcome: null, attendingCeremony: null, attendingReception: null, attendingBrunch: null, tableNumber: null, seatNumber: null }]);
     setEditDirty(false);
     setShowConfirm(false);
@@ -420,12 +423,19 @@ export default function DashboardClient() {
 
   async function saveHousehold() {
     if (!editingGuest) return;
+    // Check if slug changed - require confirmation
+    if (editSlug !== editingGuest.slug && !showSlugConfirm) {
+      setShowSlugConfirm(true);
+      return;
+    }
+    setShowSlugConfirm(false);
     const res = await fetch("/api/guests", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: editingGuest.id,
         name: editName,
+        slug: editSlug,
         side: editSide || null,
         note: editNote || null,
         tableNumber: parseInt(editTable) || null,
@@ -1607,7 +1617,10 @@ export default function DashboardClient() {
                 </div>
                 <div>
                   <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-1">Slug</label>
-                  <p className="px-3 py-2 text-sm font-body font-light text-ink-faint">/{editingGuest.slug}</p>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm text-ink-faint">/</span>
+                    <input type="text" value={editSlug} onChange={(e) => { setEditSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/--+/g, '-')); setEditDirty(true); }} className="flex-1 px-2 py-2 border border-gold-pale text-sm font-body font-light text-ink focus:outline-none focus:border-gold" />
+                  </div>
                 </div>
               </div>
 
@@ -1852,6 +1865,39 @@ export default function DashboardClient() {
                 className="px-5 py-2 bg-gold text-white font-body text-[11px] tracking-[2px] uppercase hover:bg-gold-light transition-colors"
               >
                 {pendingClose ? "Save & close" : "Yes, save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings unsaved changes confirm */}
+      {showSlugConfirm && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-ink/40" />
+          <div className="relative bg-[#FFFDF9] border border-gold-pale/60 p-8 max-w-sm w-full text-center">
+            <p className="font-display text-lg text-ink mb-2">Change guest URL?</p>
+            <p className="font-body text-sm text-ink-soft mb-2">
+              This will change the link from:
+            </p>
+            <p className="font-mono text-xs text-ink-faint bg-sand p-2 mb-1">/guest/{editingGuest?.slug}</p>
+            <p className="font-body text-xs text-ink-faint mb-1">to</p>
+            <p className="font-mono text-xs text-gold bg-sand p-2 mb-4">/guest/{editSlug}</p>
+            <p className="font-body text-xs text-red-500 mb-6">
+              Any links already sent with the old URL will stop working.
+            </p>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={() => { setShowSlugConfirm(false); setEditSlug(editingGuest?.slug || ""); }}
+                className="px-5 py-2 border border-gold-pale text-ink-soft font-body text-[11px] tracking-[2px] uppercase hover:bg-sand transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => saveHousehold()}
+                className="px-5 py-2 bg-gold text-white font-body text-[11px] tracking-[2px] uppercase hover:bg-gold-light transition-colors"
+              >
+                Yes, change URL
               </button>
             </div>
           </div>
