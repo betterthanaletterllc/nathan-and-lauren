@@ -78,116 +78,103 @@ interface Activity {
 type Tab = "overview" | "guests" | "nudge" | "activity" | "map" | "seating" | "settings";
 
 function InlineMap({ guests }: { guests: Guest[] }) {
-  const mapDiv = useRef<HTMLDivElement>(null);
-  const mapObj = useRef<any>(null);
-  const initDone = useRef(false);
-  const [status, setStatus] = useState("loading");
+  const [iframeSrc, setIframeSrc] = useState<string | null>(null);
 
-  // Load Leaflet and init map once
   useEffect(() => {
-    if (initDone.current || !mapDiv.current || guests.length === 0) return;
-    initDone.current = true;
+    if (guests.length === 0) return;
 
-    async function run() {
-      // Load CSS
-      if (!document.querySelector('link[href*="leaflet"]')) {
-        const link = document.createElement("link");
-        link.rel = "stylesheet";
-        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-        document.head.appendChild(link);
-      }
+    // Build self-contained HTML with Leaflet
+    const locations = guests.map(g => ({
+      name: g.name,
+      addr: `${g.addressLine1}, ${g.city}, ${g.state} ${g.zip}`,
+      city: `${g.city}, ${g.state}`,
+    }));
 
-      // Load JS
-      if (!(window as any).L) {
-        await new Promise<void>((resolve, reject) => {
-          const existing = document.querySelector('script[src*="leaflet"]');
-          if (existing) {
-            const check = setInterval(() => { if ((window as any).L) { clearInterval(check); resolve(); } }, 200);
-            setTimeout(() => { clearInterval(check); reject(new Error("timeout")); }, 10000);
-            return;
-          }
-          const s = document.createElement("script");
-          s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-          s.onload = () => resolve();
-          s.onerror = () => reject(new Error("script load failed"));
-          document.head.appendChild(s);
-        });
-      }
+    // Dedupe cities for geocoding
+    const cities = [...new Set(locations.map(l => l.city))];
 
-      if (!mapDiv.current) return;
-      const L = (window as any).L;
+    const html = `<!DOCTYPE html>
+<html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
+<style>body{margin:0}#map{width:100%;height:100vh}</style>
+</head><body>
+<div id="map"></div>
+<script>
+const map = L.map('map').setView([39.8,-98.5],4);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'© OpenStreetMap',maxZoom:18
+}).addTo(map);
 
-      // Init map
-      const map = L.map(mapDiv.current).setView([39.8, -98.5], 4);
-      mapObj.current = map;
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "&copy; OpenStreetMap", maxZoom: 18,
-      }).addTo(map);
+const locations = ${JSON.stringify(locations)};
+const cities = ${JSON.stringify(cities)};
+const icon = L.divIcon({
+  className:'',
+  html:'<div style="width:18px;height:18px;background:#C4956A;border:2px solid #fff;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,.3)"></div>',
+  iconSize:[18,18],iconAnchor:[9,9]
+});
 
-      // Geocode
-      const cache: Record<string, { lat: number; lng: number }> = {};
-      try { Object.assign(cache, JSON.parse(sessionStorage.getItem("geo-cache") || "{}")); } catch {}
+let cache = {};
+try { cache = JSON.parse(sessionStorage.getItem('geo-cache')||'{}'); } catch{}
 
-      const unique = new Map<string, Guest[]>();
-      for (const g of guests) {
-        const k = `${g.city}, ${g.state}`;
-        if (!unique.has(k)) unique.set(k, []);
-        unique.get(k)!.push(g);
-      }
-
-      const goldIcon = L.divIcon({
-        className: "",
-        html: '<div style="width:18px;height:18px;background:#C4956A;border:2px solid #fff;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,.3)"></div>',
-        iconSize: [18, 18], iconAnchor: [9, 9],
-      });
-
-      const bounds: [number, number][] = [];
-      for (const [key, group] of unique) {
-        let loc = cache[key];
-        if (!loc) {
-          try {
-            await new Promise(r => setTimeout(r, 1100));
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(key)}&limit=1`, { headers: { "User-Agent": "WeddingSite/1.0" } });
-            const d = await res.json();
-            if (d[0]) loc = { lat: +d[0].lat, lng: +d[0].lon };
-          } catch {}
-          if (loc) cache[key] = loc;
-        }
-        if (!loc) continue;
-        for (const g of group) {
-          const jx = (Math.random() - .5) * .015;
-          const jy = (Math.random() - .5) * .015;
-          L.marker([loc.lat + jx, loc.lng + jy], { icon: goldIcon })
-            .addTo(map)
-            .bindPopup(`<b>${g.name}</b><br><span style="font-size:11px;color:#666">${g.addressLine1}, ${g.city}, ${g.state} ${g.zip}</span>`);
-          bounds.push([loc.lat + jx, loc.lng + jy]);
-        }
-        if (bounds.length > 1) map.fitBounds(bounds, { padding: [50, 50] });
-        else if (bounds.length === 1) map.setView(bounds[0], 10);
-      }
-      try { sessionStorage.setItem("geo-cache", JSON.stringify(cache)); } catch {}
-      setStatus("done");
+async function go() {
+  const bounds = [];
+  for (const city of cities) {
+    let loc = cache[city];
+    if (!loc) {
+      try {
+        await new Promise(r=>setTimeout(r,1100));
+        const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&q='+encodeURIComponent(city)+'&limit=1',{headers:{'User-Agent':'WeddingSite/1.0'}});
+        const d = await res.json();
+        if(d[0]) loc = {lat:+d[0].lat,lng:+d[0].lon};
+      } catch{}
+      if(loc) cache[city]=loc;
     }
+    if(!loc) continue;
+    const cityLocs = locations.filter(l=>l.city===city);
+    cityLocs.forEach(l=>{
+      const jx=(Math.random()-.5)*.015;
+      const jy=(Math.random()-.5)*.015;
+      L.marker([loc.lat+jx,loc.lng+jy],{icon})
+        .addTo(map)
+        .bindPopup('<b>'+l.name+'</b><br><span style="font-size:11px;color:#666">'+l.addr+'</span>');
+      bounds.push([loc.lat+jx,loc.lng+jy]);
+    });
+    if(bounds.length>1) map.fitBounds(bounds,{padding:[50,50]});
+    else if(bounds.length===1) map.setView(bounds[0],10);
+  }
+  try{sessionStorage.setItem('geo-cache',JSON.stringify(cache));}catch{}
+}
+go();
+<\/script>
+</body></html>`;
 
-    run().catch((err) => { console.error("Map error:", err); setStatus("error"); });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [guests.length]); // Only re-run if guest count changes
+    const blob = new Blob([html], { type: "text/html" });
+    setIframeSrc(URL.createObjectURL(blob));
+
+    return () => {
+      if (iframeSrc) URL.revokeObjectURL(iframeSrc);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guests.length]);
 
   if (guests.length === 0) return null;
 
   return (
-    <div className="bg-[#FFFDF9] border border-gold-pale/40 overflow-hidden relative" style={{ height: 420 }}>
-      {status === "loading" && (
-        <div className="absolute inset-0 flex items-center justify-center z-10 bg-[#FFFDF9]/90">
-          <p className="font-body text-xs text-ink-faint tracking-widest uppercase">Loading map...</p>
+    <div className="bg-[#FFFDF9] border border-gold-pale/40 overflow-hidden" style={{ height: 420 }}>
+      {iframeSrc ? (
+        <iframe
+          src={iframeSrc}
+          style={{ width: "100%", height: 420, border: "none" }}
+          title="Guest Map"
+        />
+      ) : (
+        <div style={{ height: 420, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <p style={{ color: "#999", fontSize: 12, letterSpacing: 2, textTransform: "uppercase" }}>Loading map...</p>
         </div>
       )}
-      {status === "error" && (
-        <div className="absolute inset-0 flex items-center justify-center z-10">
-          <p className="font-body text-xs text-red-500">Failed to load map</p>
-        </div>
-      )}
-      <div ref={mapDiv} style={{ height: 420, width: "100%" }} />
     </div>
   );
 }
