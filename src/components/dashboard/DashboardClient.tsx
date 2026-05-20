@@ -5,8 +5,7 @@ import { signOut } from "next-auth/react";
 import Papa from "papaparse";
 import VideoRecorder from "./VideoRecorder";
 import SeatingChart from "./SeatingChart";
-import dynamic from "next/dynamic";
-const GuestMap = dynamic(() => import("./GuestMap"), { ssr: false });
+import GuestMap from "./GuestMap";
 
 // Types
 interface Member {

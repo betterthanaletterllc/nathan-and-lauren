@@ -99,10 +99,8 @@ export default function GuestMap({ guests }: Props) {
     return () => { cancelled = true; };
   }, [guests]);
 
-  // Initialize Leaflet map
+  // Load Leaflet on mount
   useEffect(() => {
-    if (pins.length === 0 || !mapRef.current || mapInstanceRef.current) return;
-
     function initMap() {
       const L = (window as any).L;
       if (!L || !mapRef.current || mapInstanceRef.current) return;
@@ -115,39 +113,16 @@ export default function GuestMap({ guests }: Props) {
           attribution: '&copy; OpenStreetMap',
           maxZoom: 18,
         }).addTo(map);
-
-        const goldIcon = L.divIcon({
-          className: "",
-          html: '<div style="width:20px;height:20px;background:#C4956A;border:2px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>',
-          iconSize: [20, 20],
-          iconAnchor: [10, 10],
-        });
-
-        const bounds: [number, number][] = [];
-        for (const pin of pins) {
-          L.marker([pin.lat, pin.lng], { icon: goldIcon })
-            .addTo(map)
-            .bindPopup(`<b>${pin.name}</b><br/><span style="font-size:11px;color:#666">${pin.address}</span>`);
-          bounds.push([pin.lat, pin.lng]);
-        }
-
-        if (bounds.length > 1) {
-          map.fitBounds(bounds, { padding: [50, 50] });
-        } else if (bounds.length === 1) {
-          map.setView(bounds[0], 10);
-        }
       } catch (err) {
         setError("Failed to initialize map");
       }
     }
 
-    // Check if Leaflet is already loaded
     if ((window as any).L) {
       initMap();
       return;
     }
 
-    // Load Leaflet CSS
     if (!document.querySelector('link[href*="leaflet"]')) {
       const link = document.createElement("link");
       link.rel = "stylesheet";
@@ -155,7 +130,6 @@ export default function GuestMap({ guests }: Props) {
       document.head.appendChild(link);
     }
 
-    // Load Leaflet JS
     if (!document.querySelector('script[src*="leaflet"]')) {
       const script = document.createElement("script");
       script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
@@ -163,11 +137,10 @@ export default function GuestMap({ guests }: Props) {
       script.onerror = () => setError("Failed to load map library");
       document.head.appendChild(script);
     } else {
-      // Script exists but might still be loading
       const check = setInterval(() => {
         if ((window as any).L) { clearInterval(check); initMap(); }
-      }, 100);
-      setTimeout(() => clearInterval(check), 5000);
+      }, 200);
+      setTimeout(() => clearInterval(check), 10000);
     }
 
     return () => {
@@ -176,15 +149,14 @@ export default function GuestMap({ guests }: Props) {
         mapInstanceRef.current = null;
       }
     };
-  }, [pins]);
+  }, []);
 
-  // Update markers when pins change while map exists
+  // Update markers when pins change
   useEffect(() => {
     const map = mapInstanceRef.current;
     const L = (window as any).L;
     if (!map || !L || pins.length === 0) return;
 
-    // Clear existing markers and re-add
     map.eachLayer((layer: any) => {
       if (layer instanceof L.Marker) map.removeLayer(layer);
     });
@@ -206,19 +178,22 @@ export default function GuestMap({ guests }: Props) {
 
     if (bounds.length > 1) {
       map.fitBounds(bounds, { padding: [50, 50] });
+    } else if (bounds.length === 1) {
+      map.setView(bounds[0], 10);
     }
   }, [pins]);
 
   if (guests.length === 0) return null;
 
   return (
-    <div className="bg-[#FFFDF9] border border-gold-pale/40 overflow-hidden">
-      {error ? (
-        <div className="h-[400px] flex items-center justify-center">
+    <div className="bg-[#FFFDF9] border border-gold-pale/40 overflow-hidden relative" style={{ height: 400 }}>
+      {error && (
+        <div className="absolute inset-0 flex items-center justify-center z-10">
           <p className="font-body text-xs text-red-500">{error}</p>
         </div>
-      ) : loading ? (
-        <div className="h-[400px] flex flex-col items-center justify-center gap-2">
+      )}
+      {loading && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 z-10 bg-[#FFFDF9]">
           <p className="font-body text-xs text-ink-faint tracking-widest uppercase">
             Loading map...
           </p>
@@ -228,10 +203,10 @@ export default function GuestMap({ guests }: Props) {
             </p>
           )}
         </div>
-      ) : null}
+      )}
       <div
         ref={mapRef}
-        style={{ height: error ? 0 : 400, width: "100%" }}
+        style={{ height: 400, width: "100%" }}
       />
     </div>
   );
