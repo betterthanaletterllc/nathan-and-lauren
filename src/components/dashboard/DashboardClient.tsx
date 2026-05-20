@@ -5,7 +5,6 @@ import { signOut } from "next-auth/react";
 import Papa from "papaparse";
 import VideoRecorder from "./VideoRecorder";
 import SeatingChart from "./SeatingChart";
-import GuestMap from "./GuestMap";
 
 // Types
 interface Member {
@@ -77,6 +76,121 @@ interface Activity {
 }
 
 type Tab = "overview" | "guests" | "nudge" | "activity" | "map" | "seating" | "settings";
+
+function InlineMap({ guests }: { guests: Guest[] }) {
+  const mapDiv = useRef<HTMLDivElement>(null);
+  const mapObj = useRef<any>(null);
+  const [status, setStatus] = useState("loading");
+
+  useEffect(() => {
+    if (!mapDiv.current || guests.length === 0) { setStatus("empty"); return; }
+
+    let cancelled = false;
+
+    async function run() {
+      // Load Leaflet CSS
+      if (!document.querySelector('link[href*="leaflet"]')) {
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+        document.head.appendChild(link);
+      }
+
+      // Load Leaflet JS
+      if (!(window as any).L) {
+        await new Promise<void>((resolve, reject) => {
+          if (document.querySelector('script[src*="leaflet"]')) {
+            const check = setInterval(() => { if ((window as any).L) { clearInterval(check); resolve(); } }, 200);
+            setTimeout(() => { clearInterval(check); reject(); }, 10000);
+            return;
+          }
+          const s = document.createElement("script");
+          s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+          s.onload = () => resolve();
+          s.onerror = () => reject();
+          document.head.appendChild(s);
+        });
+      }
+
+      if (cancelled || !mapDiv.current) return;
+      const L = (window as any).L;
+
+      // Init map
+      if (mapObj.current) { try { mapObj.current.remove(); } catch {} }
+      const map = L.map(mapDiv.current).setView([39.8, -98.5], 4);
+      mapObj.current = map;
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap", maxZoom: 18,
+      }).addTo(map);
+
+      // Geocode by city/state
+      const cache: Record<string, { lat: number; lng: number }> = {};
+      try { Object.assign(cache, JSON.parse(sessionStorage.getItem("geo-cache") || "{}")); } catch {}
+
+      const unique = new Map<string, Guest[]>();
+      for (const g of guests) {
+        const k = `${g.city}, ${g.state}`;
+        if (!unique.has(k)) unique.set(k, []);
+        unique.get(k)!.push(g);
+      }
+
+      const goldIcon = L.divIcon({
+        className: "",
+        html: '<div style="width:18px;height:18px;background:#C4956A;border:2px solid #fff;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,.3)"></div>',
+        iconSize: [18, 18], iconAnchor: [9, 9],
+      });
+
+      const bounds: [number, number][] = [];
+      for (const [key, group] of unique) {
+        if (cancelled) return;
+        let loc = cache[key];
+        if (!loc) {
+          try {
+            await new Promise(r => setTimeout(r, 1100));
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(key)}&limit=1`, { headers: { "User-Agent": "WeddingSite/1.0" } });
+            const d = await res.json();
+            if (d[0]) loc = { lat: +d[0].lat, lng: +d[0].lon };
+          } catch {}
+          if (loc) cache[key] = loc;
+        }
+        if (!loc) continue;
+        for (const g of group) {
+          const jx = (Math.random() - .5) * .015;
+          const jy = (Math.random() - .5) * .015;
+          L.marker([loc.lat + jx, loc.lng + jy], { icon: goldIcon })
+            .addTo(map)
+            .bindPopup(`<b>${g.name}</b><br><span style="font-size:11px;color:#666">${g.addressLine1}, ${g.city}, ${g.state} ${g.zip}</span>`);
+          bounds.push([loc.lat + jx, loc.lng + jy]);
+        }
+        if (!cancelled && bounds.length > 1) map.fitBounds(bounds, { padding: [50, 50] });
+        else if (!cancelled && bounds.length === 1) map.setView(bounds[0], 10);
+      }
+      try { sessionStorage.setItem("geo-cache", JSON.stringify(cache)); } catch {}
+      if (!cancelled) setStatus("done");
+    }
+
+    run().catch(() => { if (!cancelled) setStatus("error"); });
+    return () => { cancelled = true; if (mapObj.current) { try { mapObj.current.remove(); } catch {} mapObj.current = null; } };
+  }, [guests]);
+
+  if (guests.length === 0) return null;
+
+  return (
+    <div className="bg-[#FFFDF9] border border-gold-pale/40 overflow-hidden relative" style={{ height: 420 }}>
+      {status === "loading" && (
+        <div className="absolute inset-0 flex items-center justify-center z-10 bg-[#FFFDF9]/90">
+          <p className="font-body text-xs text-ink-faint tracking-widest uppercase">Loading map...</p>
+        </div>
+      )}
+      {status === "error" && (
+        <div className="absolute inset-0 flex items-center justify-center z-10">
+          <p className="font-body text-xs text-red-500">Failed to load map</p>
+        </div>
+      )}
+      <div ref={mapDiv} style={{ height: 420, width: "100%" }} />
+    </div>
+  );
+}
 
 export default function DashboardClient() {
   const [guests, setGuests] = useState<Guest[]>([]);
@@ -1142,16 +1256,8 @@ export default function DashboardClient() {
         {/* GUEST MAP TAB */}
         {tab === "map" && (
           <div className="space-y-6">
-            {/* Map with pins */}
-            {(() => {
-              const mapGuests = guests.filter((g) => g.addressLine1 && g.city && g.state).map((g) => ({
-                name: g.name,
-                address: g.addressLine1 || "",
-                city: g.city || "",
-                state: g.state || "",
-              }));
-              return mapGuests.length > 0 ? <GuestMap guests={mapGuests} /> : null;
-            })()}
+            {/* Inline map */}
+            <InlineMap guests={guests.filter((g) => g.addressLine1 && g.city && g.state)} />
 
             {(() => {
               const withAddress = guests.filter((g) => g.addressLine1 && g.city && g.state);
