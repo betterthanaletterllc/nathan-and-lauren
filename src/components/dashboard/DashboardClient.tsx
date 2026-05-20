@@ -5,7 +5,8 @@ import { signOut } from "next-auth/react";
 import Papa from "papaparse";
 import VideoRecorder from "./VideoRecorder";
 import SeatingChart from "./SeatingChart";
-// // import GuestMap from "./GuestMap";
+import dynamic from "next/dynamic";
+const GuestMap = dynamic(() => import("./GuestMap"), { ssr: false });
 
 // Types
 interface Member {
@@ -1142,18 +1143,16 @@ export default function DashboardClient() {
         {/* GUEST MAP TAB */}
         {tab === "map" && (
           <div className="space-y-6">
-            {/* Map with pins - temporarily disabled */}
-            {/* {(() => {
-              try {
-                const mapGuests = guests.filter((g) => g.addressLine1 && g.city && g.state).map((g) => ({
-                  name: g.name,
-                  address: g.addressLine1 || "",
-                  city: g.city || "",
-                  state: g.state || "",
-                }));
-                return mapGuests.length > 0 ? <GuestMap guests={mapGuests} /> : null;
-              } catch { return null; }
-            })()} */}
+            {/* Map with pins */}
+            {(() => {
+              const mapGuests = guests.filter((g) => g.addressLine1 && g.city && g.state).map((g) => ({
+                name: g.name,
+                address: g.addressLine1 || "",
+                city: g.city || "",
+                state: g.state || "",
+              }));
+              return mapGuests.length > 0 ? <GuestMap guests={mapGuests} /> : null;
+            })()}
 
             {(() => {
               const withAddress = guests.filter((g) => g.addressLine1 && g.city && g.state);
