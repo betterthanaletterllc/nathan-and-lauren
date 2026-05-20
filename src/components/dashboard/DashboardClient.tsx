@@ -80,15 +80,16 @@ type Tab = "overview" | "guests" | "nudge" | "activity" | "map" | "seating" | "s
 function InlineMap({ guests }: { guests: Guest[] }) {
   const mapDiv = useRef<HTMLDivElement>(null);
   const mapObj = useRef<any>(null);
+  const initDone = useRef(false);
   const [status, setStatus] = useState("loading");
 
+  // Load Leaflet and init map once
   useEffect(() => {
-    if (!mapDiv.current || guests.length === 0) { setStatus("empty"); return; }
-
-    let cancelled = false;
+    if (initDone.current || !mapDiv.current || guests.length === 0) return;
+    initDone.current = true;
 
     async function run() {
-      // Load Leaflet CSS
+      // Load CSS
       if (!document.querySelector('link[href*="leaflet"]')) {
         const link = document.createElement("link");
         link.rel = "stylesheet";
@@ -96,34 +97,34 @@ function InlineMap({ guests }: { guests: Guest[] }) {
         document.head.appendChild(link);
       }
 
-      // Load Leaflet JS
+      // Load JS
       if (!(window as any).L) {
         await new Promise<void>((resolve, reject) => {
-          if (document.querySelector('script[src*="leaflet"]')) {
+          const existing = document.querySelector('script[src*="leaflet"]');
+          if (existing) {
             const check = setInterval(() => { if ((window as any).L) { clearInterval(check); resolve(); } }, 200);
-            setTimeout(() => { clearInterval(check); reject(); }, 10000);
+            setTimeout(() => { clearInterval(check); reject(new Error("timeout")); }, 10000);
             return;
           }
           const s = document.createElement("script");
           s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
           s.onload = () => resolve();
-          s.onerror = () => reject();
+          s.onerror = () => reject(new Error("script load failed"));
           document.head.appendChild(s);
         });
       }
 
-      if (cancelled || !mapDiv.current) return;
+      if (!mapDiv.current) return;
       const L = (window as any).L;
 
       // Init map
-      if (mapObj.current) { try { mapObj.current.remove(); } catch {} }
       const map = L.map(mapDiv.current).setView([39.8, -98.5], 4);
       mapObj.current = map;
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "&copy; OpenStreetMap", maxZoom: 18,
       }).addTo(map);
 
-      // Geocode by city/state
+      // Geocode
       const cache: Record<string, { lat: number; lng: number }> = {};
       try { Object.assign(cache, JSON.parse(sessionStorage.getItem("geo-cache") || "{}")); } catch {}
 
@@ -142,7 +143,6 @@ function InlineMap({ guests }: { guests: Guest[] }) {
 
       const bounds: [number, number][] = [];
       for (const [key, group] of unique) {
-        if (cancelled) return;
         let loc = cache[key];
         if (!loc) {
           try {
@@ -162,16 +162,16 @@ function InlineMap({ guests }: { guests: Guest[] }) {
             .bindPopup(`<b>${g.name}</b><br><span style="font-size:11px;color:#666">${g.addressLine1}, ${g.city}, ${g.state} ${g.zip}</span>`);
           bounds.push([loc.lat + jx, loc.lng + jy]);
         }
-        if (!cancelled && bounds.length > 1) map.fitBounds(bounds, { padding: [50, 50] });
-        else if (!cancelled && bounds.length === 1) map.setView(bounds[0], 10);
+        if (bounds.length > 1) map.fitBounds(bounds, { padding: [50, 50] });
+        else if (bounds.length === 1) map.setView(bounds[0], 10);
       }
       try { sessionStorage.setItem("geo-cache", JSON.stringify(cache)); } catch {}
-      if (!cancelled) setStatus("done");
+      setStatus("done");
     }
 
-    run().catch(() => { if (!cancelled) setStatus("error"); });
-    return () => { cancelled = true; if (mapObj.current) { try { mapObj.current.remove(); } catch {} mapObj.current = null; } };
-  }, [guests]);
+    run().catch((err) => { console.error("Map error:", err); setStatus("error"); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guests.length]); // Only re-run if guest count changes
 
   if (guests.length === 0) return null;
 
@@ -282,6 +282,8 @@ export default function DashboardClient() {
   const [tagFilter, setTagFilter] = useState("");
 
   // Sorted & filtered guest list
+  const mapGuests = useMemo(() => guests.filter((g) => g.addressLine1 && g.city && g.state), [guests]);
+
   const filteredGuests = useMemo(() => {
     let list = [...guests];
     if (filter) {
@@ -1257,7 +1259,7 @@ export default function DashboardClient() {
         {tab === "map" && (
           <div className="space-y-6">
             {/* Inline map */}
-            <InlineMap guests={guests.filter((g) => g.addressLine1 && g.city && g.state)} />
+            <InlineMap guests={mapGuests} />
 
             {(() => {
               const withAddress = guests.filter((g) => g.addressLine1 && g.city && g.state);
