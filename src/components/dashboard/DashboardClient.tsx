@@ -79,6 +79,21 @@ interface Activity {
 
 type Tab = "overview" | "guests" | "nudge" | "activity" | "map" | "seating" | "settings";
 
+function AutoGeocode({ count, onDone }: { count: number; onDone: () => void }) {
+  const started = useRef(false);
+  useEffect(() => {
+    if (started.current) return;
+    started.current = true;
+    fetch("/api/geocode", { method: "POST" }).then(() => onDone()).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <div className="bg-[#FFFDF9] border border-gold-pale/40 p-3 text-center">
+      <p className="font-body text-xs text-ink-faint">Geocoding {count} addresses...</p>
+    </div>
+  );
+}
+
 function InlineMap({ guests }: { guests: Guest[] }) {
   const [iframeSrc, setIframeSrc] = useState<string | null>(null);
 
@@ -1255,24 +1270,9 @@ export default function DashboardClient() {
             {/* Inline map */}
             <InlineMap guests={mapGuests} />
 
-            {/* Geocode missing addresses */}
+            {/* Auto-geocode missing addresses */}
             {mapGuests.some((g) => !g.latitude) && (
-              <div className="bg-[#FFFDF9] border border-gold-pale/40 p-4 flex items-center justify-between">
-                <p className="font-body text-xs text-ink-faint">
-                  {mapGuests.filter((g) => !g.latitude).length} addresses need geocoding for map pins
-                </p>
-                <button
-                  onClick={async () => {
-                    const res = await fetch("/api/geocode", { method: "POST" });
-                    const data = await res.json();
-                    alert(`Geocoded ${data.geocoded} of ${data.total} addresses`);
-                    fetchAll();
-                  }}
-                  className="px-4 py-2 bg-gold text-white font-body text-[10px] tracking-[2px] uppercase hover:bg-gold-light transition-colors"
-                >
-                  Geocode Now
-                </button>
-              </div>
+              <AutoGeocode count={mapGuests.filter((g) => !g.latitude).length} onDone={fetchAll} />
             )}
 
             {(() => {
