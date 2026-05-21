@@ -41,6 +41,23 @@ export async function POST(req: NextRequest) {
     })
     .where(eq(guests.id, guest.id));
 
+  // Geocode in background — don't block the response
+  (async () => {
+    try {
+      const q = encodeURIComponent(`${addressLine1}, ${city}, ${state} ${zip}`);
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}&limit=1`, {
+        headers: { "User-Agent": "NathanAndLaurenWedding/1.0" },
+      });
+      const data = await res.json();
+      if (data[0]) {
+        await db
+          .update(guests)
+          .set({ latitude: data[0].lat, longitude: data[0].lon })
+          .where(eq(guests.id, guest.id));
+      }
+    } catch {}
+  })();
+
   await db.insert(activityLog).values({
     guestId: guest.id,
     action: "address_submitted",

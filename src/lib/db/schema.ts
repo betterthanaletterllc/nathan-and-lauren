@@ -28,6 +28,8 @@ export const guests = pgTable("guests", {
   state: text("state"),
   zip: varchar("zip", { length: 20 }),
   country: text("country"),
+  latitude: text("latitude"),
+  longitude: text("longitude"),
 
   // RSVP tracking
   rsvpSubmittedAt: timestamp("rsvp_submitted_at", { withTimezone: true }),

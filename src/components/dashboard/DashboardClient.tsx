@@ -45,6 +45,8 @@ interface Guest {
   state: string | null;
   zip: string | null;
   country: string | null;
+  latitude: string | null;
+  longitude: string | null;
   rsvpSubmittedAt: string | null;
   passportConfirmed: boolean;
   flightsBooked: boolean;
@@ -83,15 +85,22 @@ function InlineMap({ guests }: { guests: Guest[] }) {
   useEffect(() => {
     if (guests.length === 0) return;
 
-    // Build self-contained HTML with Leaflet
-    const locations = guests.map(g => ({
+    // Split into pre-geocoded and needing geocoding
+    const preGeocoded = guests.filter(g => g.latitude && g.longitude).map(g => ({
+      name: g.name,
+      addr: `${g.addressLine1}, ${g.city}, ${g.state} ${g.zip}`,
+      lat: parseFloat(g.latitude!),
+      lng: parseFloat(g.longitude!),
+    }));
+
+    const needsGeocode = guests.filter(g => !g.latitude || !g.longitude).map(g => ({
       name: g.name,
       addr: `${g.addressLine1}, ${g.city}, ${g.state} ${g.zip}`,
       city: `${g.city}, ${g.state}`,
     }));
 
     // Dedupe cities for geocoding
-    const cities = [...new Set(locations.map(l => l.city))];
+    const cities = [...new Set(needsGeocode.map(l => l.city))];
 
     const html = `<!DOCTYPE html>
 <html><head>
@@ -108,55 +117,57 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
   attribution:'© OpenStreetMap',maxZoom:18
 }).addTo(map);
 
-const locations = ${JSON.stringify(locations)};
-const cities = ${JSON.stringify(cities)};
 const icon = L.divIcon({
   className:'',
   html:'<div style="width:18px;height:18px;background:#C4956A;border:2px solid #fff;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,.3)"></div>',
   iconSize:[18,18],iconAnchor:[9,9]
 });
 
-let cache = {};
-try { cache = JSON.parse(sessionStorage.getItem('geo-cache')||'{}'); } catch{}
+const bounds = [];
 
-async function go() {
-  const bounds = [];
+// Add pre-geocoded pins immediately
+const preGeocoded = ${JSON.stringify(preGeocoded)};
+preGeocoded.forEach(function(p) {
+  L.marker([p.lat,p.lng],{icon:icon})
+    .addTo(map)
+    .bindPopup('<b>'+p.name+'</b><br><span style="font-size:11px;color:#666">'+p.addr+'</span>');
+  bounds.push([p.lat,p.lng]);
+});
+if(bounds.length>1) map.fitBounds(bounds,{padding:[50,50]});
+else if(bounds.length===1) map.setView(bounds[0],10);
+
+// Geocode remaining
+const needsGeocode = ${JSON.stringify(needsGeocode)};
+const cities = ${JSON.stringify(cities)};
+
+async function geocodeRemaining() {
   for (const city of cities) {
-    let loc = cache[city];
-    if (!loc) {
-      try {
-        await new Promise(r=>setTimeout(r,1100));
-        const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&q='+encodeURIComponent(city)+'&limit=1',{headers:{'User-Agent':'WeddingSite/1.0'}});
-        const d = await res.json();
-        if(d[0]) loc = {lat:+d[0].lat,lng:+d[0].lon};
-      } catch{}
-      if(loc) cache[city]=loc;
-    }
-    if(!loc) continue;
-    const cityLocs = locations.filter(l=>l.city===city);
-    cityLocs.forEach(l=>{
-      const jx=(Math.random()-.5)*.015;
-      const jy=(Math.random()-.5)*.015;
-      L.marker([loc.lat+jx,loc.lng+jy],{icon})
-        .addTo(map)
-        .bindPopup('<b>'+l.name+'</b><br><span style="font-size:11px;color:#666">'+l.addr+'</span>');
-      bounds.push([loc.lat+jx,loc.lng+jy]);
-    });
-    if(bounds.length>1) map.fitBounds(bounds,{padding:[50,50]});
-    else if(bounds.length===1) map.setView(bounds[0],10);
+    try {
+      await new Promise(function(r){setTimeout(r,1100)});
+      const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&q='+encodeURIComponent(city)+'&limit=1',{headers:{'User-Agent':'WeddingSite/1.0'}});
+      const d = await res.json();
+      if(!d[0]) continue;
+      const loc = {lat:+d[0].lat,lng:+d[0].lon};
+      needsGeocode.filter(function(l){return l.city===city}).forEach(function(l){
+        var jx=(Math.random()-.5)*.015;
+        var jy=(Math.random()-.5)*.015;
+        L.marker([loc.lat+jx,loc.lng+jy],{icon:icon})
+          .addTo(map)
+          .bindPopup('<b>'+l.name+'</b><br><span style="font-size:11px;color:#666">'+l.addr+'</span>');
+        bounds.push([loc.lat+jx,loc.lng+jy]);
+      });
+      if(bounds.length>1) map.fitBounds(bounds,{padding:[50,50]});
+    } catch(e){}
   }
-  try{sessionStorage.setItem('geo-cache',JSON.stringify(cache));}catch{}
 }
-go();
+if(cities.length>0) geocodeRemaining();
 <\/script>
 </body></html>`;
 
     const blob = new Blob([html], { type: "text/html" });
-    setIframeSrc(URL.createObjectURL(blob));
-
-    return () => {
-      if (iframeSrc) URL.revokeObjectURL(iframeSrc);
-    };
+    const url = URL.createObjectURL(blob);
+    setIframeSrc(url);
+    return () => URL.revokeObjectURL(url);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [guests.length]);
 
@@ -165,11 +176,7 @@ go();
   return (
     <div className="bg-[#FFFDF9] border border-gold-pale/40 overflow-hidden" style={{ height: 420 }}>
       {iframeSrc ? (
-        <iframe
-          src={iframeSrc}
-          style={{ width: "100%", height: 420, border: "none" }}
-          title="Guest Map"
-        />
+        <iframe src={iframeSrc} style={{ width: "100%", height: 420, border: "none" }} title="Guest Map" />
       ) : (
         <div style={{ height: 420, display: "flex", alignItems: "center", justifyContent: "center" }}>
           <p style={{ color: "#999", fontSize: 12, letterSpacing: 2, textTransform: "uppercase" }}>Loading map...</p>
@@ -1247,6 +1254,26 @@ export default function DashboardClient() {
           <div className="space-y-6">
             {/* Inline map */}
             <InlineMap guests={mapGuests} />
+
+            {/* Geocode missing addresses */}
+            {mapGuests.some((g) => !g.latitude) && (
+              <div className="bg-[#FFFDF9] border border-gold-pale/40 p-4 flex items-center justify-between">
+                <p className="font-body text-xs text-ink-faint">
+                  {mapGuests.filter((g) => !g.latitude).length} addresses need geocoding for map pins
+                </p>
+                <button
+                  onClick={async () => {
+                    const res = await fetch("/api/geocode", { method: "POST" });
+                    const data = await res.json();
+                    alert(`Geocoded ${data.geocoded} of ${data.total} addresses`);
+                    fetchAll();
+                  }}
+                  className="px-4 py-2 bg-gold text-white font-body text-[10px] tracking-[2px] uppercase hover:bg-gold-light transition-colors"
+                >
+                  Geocode Now
+                </button>
+              </div>
+            )}
 
             {(() => {
               const withAddress = guests.filter((g) => g.addressLine1 && g.city && g.state);
