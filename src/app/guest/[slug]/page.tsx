@@ -71,7 +71,8 @@ export default async function GuestPage({ params }: Props) {
   const globalNote = config["global_note"] || "";
   const note = guest.note || globalNote;
   const showTable = config["show_table_numbers"] === "true";
-  const phase = config["guest_page_phase"] || "save_the_date";
+  const globalPhase = config["guest_page_phase"] || "save_the_date";
+  const phase = guest.phaseOverride || globalPhase;
   const videoUrl = guest.videoUrl || config["global_video_url"] || "";
   const roomBlockLink = config["room_block_link"] || "";
   const destinationAirport = config["destination_airport"] || "CUN";

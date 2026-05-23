@@ -16,6 +16,7 @@ export const guests = pgTable("guests", {
   partySize: integer("party_size").notNull().default(1),
   tableNumber: integer("table_number"),
   side: varchar("side", { length: 20 }), // 'bride' | 'groom' | 'both'
+  phaseOverride: varchar("phase_override", { length: 32 }), // null = use global, or 'save_the_date' | 'rsvp' | 'checklist' | 'arrived' | 'final'
   tags: jsonb("tags").$type<string[]>(), // array of tag strings
   note: text("note"),
   plusOneAllowed: boolean("plus_one_allowed").notNull().default(false),

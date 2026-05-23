@@ -34,6 +34,7 @@ interface Guest {
   partySize: number;
   tableNumber: number | null;
   side: string | null;
+  phaseOverride: string | null;
   tags: string[] | null;
   note: string | null;
   plusOneAllowed: boolean;
@@ -507,6 +508,7 @@ export default function DashboardClient() {
   const [editingGuest, setEditingGuest] = useState<Guest | null>(null);
   const [editName, setEditName] = useState("");
   const [editSide, setEditSide] = useState("");
+  const [editPhaseOverride, setEditPhaseOverride] = useState("");
   const [editNote, setEditNote] = useState("");
   const [editTable, setEditTable] = useState("");
   const [editPlusOne, setEditPlusOne] = useState(false);
@@ -524,6 +526,7 @@ export default function DashboardClient() {
     setEditingGuest(g);
     setEditName(g.name);
     setEditSide(g.side || "");
+    setEditPhaseOverride(g.phaseOverride || "");
     setEditNote(g.note || "");
     setEditTable(g.tableNumber?.toString() || "");
     setEditPlusOne(g.plusOneAllowed);
@@ -562,6 +565,7 @@ export default function DashboardClient() {
         name: editName,
         slug: editSlug,
         side: editSide || null,
+        phaseOverride: editPhaseOverride || null,
         note: editNote || null,
         tableNumber: parseInt(editTable) || null,
         plusOneAllowed: editPlusOne,
@@ -971,6 +975,7 @@ export default function DashboardClient() {
                       ["name", "Name"],
                       ["partySize", "Party"],
                       ["texted", "Texted"],
+                      ["phase", "Phase"],
                       ["phone", "Phone"],
                       ["media", "📝 / 🎥"],
                       ["tableNumber", "Table"],
@@ -1028,6 +1033,26 @@ export default function DashboardClient() {
                           className="cursor-pointer"
                           title={g.linkTexted ? "Texted" : "Not texted yet"}
                         />
+                      </td>
+                      <td className="px-4 py-3">
+                        <select
+                          value={g.phaseOverride || ""}
+                          onChange={(e) => {
+                            fetch("/api/guests", {
+                              method: "PUT",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ id: g.id, phaseOverride: e.target.value || null }),
+                            }).then(() => fetchAll());
+                          }}
+                          className={`w-24 px-1 py-1 border border-gold-pale text-[9px] font-body focus:outline-none focus:border-gold bg-white ${g.phaseOverride ? "text-gold font-medium" : "text-ink-faint"}`}
+                        >
+                          <option value="">Global</option>
+                          <option value="save_the_date">Save Date</option>
+                          <option value="rsvp">RSVP</option>
+                          <option value="checklist">Checklist</option>
+                          <option value="arrived">Arrived</option>
+                          <option value="final">Final</option>
+                        </select>
                       </td>
                       <td className="px-4 py-3">
                         {/* Phone - show first member's phone, inline editable */}
@@ -1729,6 +1754,17 @@ export default function DashboardClient() {
                     <option value="bride">Bride</option>
                     <option value="groom">Groom</option>
                     <option value="both">Both</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-1">Phase</label>
+                  <select value={editPhaseOverride} onChange={(e) => { setEditPhaseOverride(e.target.value); setEditDirty(true); }} className={`w-full px-3 py-2 border border-gold-pale text-sm font-body font-light focus:outline-none focus:border-gold bg-white ${editPhaseOverride ? "text-gold font-medium" : "text-ink"}`}>
+                    <option value="">Use global</option>
+                    <option value="save_the_date">Save the Date</option>
+                    <option value="rsvp">RSVP</option>
+                    <option value="checklist">Checklist</option>
+                    <option value="arrived">Arrived</option>
+                    <option value="final">Final</option>
                   </select>
                 </div>
                 <div>
