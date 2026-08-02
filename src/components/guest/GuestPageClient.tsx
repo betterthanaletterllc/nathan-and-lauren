@@ -479,7 +479,30 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
     "w-full px-4 py-3 bg-white border border-gold-pale rounded-none text-[15px] font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold transition-colors";
 
   return (
-    <div className="min-h-dvh bg-sand flex items-center justify-center p-4 sm:p-8">
+    <div className="min-h-dvh bg-sand flex flex-col items-center justify-center p-4 sm:p-8">
+      {/* Travel quick links — utility chrome outside the invitation, like the
+          enclosure cards in a physical suite */}
+      {(phase === "rsvp" || phase === "checklist") && roomBlockLink && (
+        <div className="w-full max-w-[480px] grid grid-cols-2 gap-3 mb-3">
+          <a
+            href={roomBlockLink}
+            target="_blank"
+            rel="noopener"
+            className="py-2.5 text-center border border-gold text-gold font-body font-medium text-[11px] tracking-[2px] uppercase hover:bg-gold hover:text-white transition-colors"
+          >
+            Check Hotel Rooms
+          </a>
+          <button
+            onClick={() => {
+              if (!userAirport) findNearestAirport();
+              window.open(getFlightsUrl(), "_blank");
+            }}
+            className="py-2.5 text-center border border-gold text-gold font-body font-medium text-[11px] tracking-[2px] uppercase hover:bg-gold hover:text-white transition-colors"
+          >
+            Check Flights
+          </button>
+        </div>
+      )}
       <div className="bg-[#FFFDF9] max-w-[480px] w-full relative border border-gold-pale/60">
         {/* Corner accents */}
         <div className="absolute top-3 left-3 w-5 h-5 border-t border-l border-gold" />
@@ -1013,61 +1036,6 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
               )}
             </div>
           )}
-
-          {/* Early booking links — beneath the RSVP area, before a household has
-              RSVP'd, so nobody waits on their RSVP to grab a room or flights.
-              (After RSVP the full Getting-there steps below take over.) */}
-          {(phase === "rsvp" || phase === "checklist" || phase === "final") &&
-            !rsvpSubmitted &&
-            (roomBlockLink || roomBlockCode) && (
-              <div className="mt-8 animate-fadeUp animation-delay-600">
-                <div className="w-10 h-px bg-gold mx-auto mb-6" />
-                <p className="font-body font-light text-[12px] tracking-[2px] uppercase text-ink-soft text-center mb-1">
-                  Getting there
-                </p>
-                <p className="font-body font-light text-[13px] text-ink-faint text-center mb-4">
-                  No need to wait on your RSVP — rooms and flights are ready to book.
-                </p>
-                <div className="space-y-3">
-                  {roomBlockLink && (
-                    <a
-                      href={roomBlockLink}
-                      target="_blank"
-                      rel="noopener"
-                      className="block py-3.5 text-center bg-gold text-white font-body font-medium text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors"
-                    >
-                      Book Your Room
-                    </a>
-                  )}
-                  {roomBlockCode && (
-                    <div className="text-center">
-                      <p className="font-body font-light text-[12px] text-ink-soft">
-                        Group code:{" "}
-                        <code className="font-body font-medium tracking-wide uppercase text-ink bg-white border border-gold-pale px-1.5 py-0.5">
-                          {roomBlockCode}
-                        </code>
-                      </p>
-                      <p className="font-body font-light italic text-[11px] text-ink-faint mt-1">
-                        *Enter in the promotion code box if not already there
-                      </p>
-                    </div>
-                  )}
-                  <button
-                    onClick={() => {
-                      if (!userAirport) {
-                        findNearestAirport();
-                        window.open(getFlightsUrl(), "_blank");
-                      } else {
-                        window.open(getFlightsUrl(), "_blank");
-                      }
-                    }}
-                    className="w-full py-3.5 text-center border-2 border-gold text-gold font-body font-medium text-[13px] tracking-[3px] uppercase hover:bg-gold hover:text-white transition-colors"
-                  >
-                    Search Flights
-                  </button>
-                </div>
-              </div>
-            )}
 
           {/* The Weekend — event schedule, visible from the RSVP phase so guests
               can book flights around the full weekend (arrived/final phases show
