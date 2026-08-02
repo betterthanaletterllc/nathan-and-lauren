@@ -1110,7 +1110,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                       {roomBlockCode && (
                         <p className="font-body font-light text-[12px] text-ink-soft mt-3 leading-relaxed">
                           Group code:{" "}
-                          <code className="font-body font-medium tracking-wide text-ink bg-white border border-gold-pale px-1.5 py-0.5">
+                          <code className="font-body font-medium tracking-wide uppercase text-ink bg-white border border-gold-pale px-1.5 py-0.5">
                             {roomBlockCode}
                           </code>{" "}
                           — use it if you book by phone or on your own.
