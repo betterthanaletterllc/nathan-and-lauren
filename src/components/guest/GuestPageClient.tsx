@@ -529,7 +529,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
             </h1>
             <div className="flex items-center justify-center gap-4 my-1.5">
               <span className="w-12 h-px bg-gold" />
-              <span className="font-display italic font-medium text-2xl text-gold">
+              <span className="font-display font-medium text-2xl text-gold">
                 &
               </span>
               <span className="w-12 h-px bg-gold" />
