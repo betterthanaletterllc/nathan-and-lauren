@@ -506,31 +506,31 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
       <div className="bg-[#FAF4EF] max-w-[480px] w-full relative shadow-[0_2px_20px_rgba(36,76,58,0.10)]">
         {/* Invitation artwork — botanical corners + ornaments extracted from the printed suite */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/invite/corner-tl.webp" alt="" aria-hidden className="pointer-events-none select-none absolute top-0 left-0 w-[167px]" />
+        <img src="/invite/corner-tl.webp" alt="" aria-hidden className="pointer-events-none select-none absolute top-0 left-0 w-[110px] sm:w-[140px]" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/invite/corner-tr.webp" alt="" aria-hidden className="pointer-events-none select-none absolute top-0 right-0 w-[167px]" />
+        <img src="/invite/corner-tr.webp" alt="" aria-hidden className="pointer-events-none select-none absolute top-0 right-0 w-[110px] sm:w-[140px]" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/invite/corner-bl.webp" alt="" aria-hidden className="pointer-events-none select-none absolute bottom-0 left-0 w-[167px]" />
+        <img src="/invite/corner-bl.webp" alt="" aria-hidden className="pointer-events-none select-none absolute bottom-0 left-0 w-[100px] sm:w-[120px]" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/invite/corner-br.webp" alt="" aria-hidden className="pointer-events-none select-none absolute bottom-0 right-0 w-[167px]" />
+        <img src="/invite/corner-br.webp" alt="" aria-hidden className="pointer-events-none select-none absolute bottom-0 right-0 w-[100px] sm:w-[120px]" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/invite/ornament-top.webp" alt="" aria-hidden className="pointer-events-none select-none absolute top-0 left-1/2 -translate-x-1/2 w-[87px]" />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/invite/ornament-bottom.webp" alt="" aria-hidden className="pointer-events-none select-none absolute bottom-0 left-1/2 -translate-x-1/2 w-[87px]" />
 
         {/* Frame connectors — fade out before reaching the corner art so nothing has to align to the pixel */}
-        <div className="pointer-events-none absolute top-[12px] left-[150px] right-[150px] h-px bg-gradient-to-r from-transparent via-gold/70 to-transparent" />
-        <div className="pointer-events-none absolute top-[17px] left-[150px] right-[150px] h-px bg-gradient-to-r from-transparent via-gold/40 to-transparent" />
-        <div className="pointer-events-none absolute bottom-[12px] left-[150px] right-[150px] h-px bg-gradient-to-r from-transparent via-gold/70 to-transparent" />
-        <div className="pointer-events-none absolute bottom-[17px] left-[150px] right-[150px] h-px bg-gradient-to-r from-transparent via-gold/40 to-transparent" />
-        <div className="pointer-events-none absolute left-[10px] top-[190px] bottom-[190px] w-px bg-gradient-to-b from-transparent via-gold/70 to-transparent" />
-        <div className="pointer-events-none absolute left-[15px] top-[190px] bottom-[190px] w-px bg-gradient-to-b from-transparent via-gold/40 to-transparent" />
-        <div className="pointer-events-none absolute right-[10px] top-[190px] bottom-[190px] w-px bg-gradient-to-b from-transparent via-gold/70 to-transparent" />
-        <div className="pointer-events-none absolute right-[15px] top-[190px] bottom-[190px] w-px bg-gradient-to-b from-transparent via-gold/40 to-transparent" />
+        <div className="pointer-events-none absolute top-[12px] left-[130px] right-[130px] h-px bg-gradient-to-r from-transparent via-gold/70 to-transparent" />
+        <div className="pointer-events-none absolute top-[17px] left-[130px] right-[130px] h-px bg-gradient-to-r from-transparent via-gold/40 to-transparent" />
+        <div className="pointer-events-none absolute bottom-[12px] left-[112px] right-[112px] h-px bg-gradient-to-r from-transparent via-gold/70 to-transparent" />
+        <div className="pointer-events-none absolute bottom-[17px] left-[112px] right-[112px] h-px bg-gradient-to-r from-transparent via-gold/40 to-transparent" />
+        <div className="pointer-events-none absolute left-[10px] top-[160px] bottom-[138px] w-px bg-gradient-to-b from-transparent via-gold/70 to-transparent" />
+        <div className="pointer-events-none absolute left-[15px] top-[160px] bottom-[138px] w-px bg-gradient-to-b from-transparent via-gold/40 to-transparent" />
+        <div className="pointer-events-none absolute right-[10px] top-[160px] bottom-[138px] w-px bg-gradient-to-b from-transparent via-gold/70 to-transparent" />
+        <div className="pointer-events-none absolute right-[15px] top-[160px] bottom-[138px] w-px bg-gradient-to-b from-transparent via-gold/40 to-transparent" />
 
         {/* Status strip */}
         {showStrip && (rsvpSubmitted || rsvpDeadlineDate) && (
-          <div className="sticky top-2 z-20 mx-4 mt-4 px-4 py-3 bg-[#F4EDDC] border border-gold/30 shadow-sm flex items-center justify-center gap-x-3 gap-y-1 flex-wrap text-[12px] tracking-[1.5px] uppercase text-ink-soft">
+          <div className="sticky top-2 z-20 mx-4 mt-7 px-4 py-3 bg-[#F4EDDC] border border-gold/30 shadow-sm flex items-center justify-center gap-x-3 gap-y-1 flex-wrap text-[12px] tracking-[1.5px] uppercase text-ink-soft">
             {!rsvpSubmitted ? (
               <>
                 <span className="inline-flex items-center gap-1.5">
@@ -562,7 +562,8 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
           </div>
         )}
 
-        <div className="px-8 py-12 sm:px-10 sm:py-14 text-center">
+        {/* relative => content paints ABOVE the absolutely-positioned corner art */}
+        <div className="relative px-8 pt-16 pb-20 sm:px-10 sm:pt-16 sm:pb-20 text-center">
           {/* Top label — save-the-date framing until the address is in, then invitation framing */}
           <p className="font-body font-normal text-[10px] tracking-[6px] uppercase text-gold mb-8 animate-fadeUp">
             {phase === "save_the_date" ? "Save the Date" : "Together with their families"}
