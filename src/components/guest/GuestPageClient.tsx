@@ -66,6 +66,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
   const [rsvpSubmitted, setRsvpSubmitted] = useState(guest.rsvpSubmitted);
   const [checklistSubmitted, setChecklistSubmitted] = useState(guest.checklistSubmitted);
   const [showRateInfo, setShowRateInfo] = useState(false);
+  const [showFlightInfo, setShowFlightInfo] = useState(false);
   const [form, setForm] = useState({
     addressLine1: "",
     addressLine2: "",
@@ -1150,10 +1151,29 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                     <p className="font-body text-[11px] tracking-[2px] uppercase text-gold mb-2">
                       Step {flightsStepNum} — Book your flights
                     </p>
-                    <p className="font-body font-light text-[15px] text-ink-soft mb-4">
-                      Fly into Cancún ({destinationAirport}) — most of the group arrives{" "}
-                      {formatDeadline(travelDateStart) || travelDateStart} and heads home{" "}
-                      {formatDeadline(travelDateEnd) || travelDateEnd}.
+                    <p className="relative font-body font-light text-[15px] text-ink-soft mb-4">
+                      Fly into Cancún International Airport ({destinationAirport}){" "}
+                      {(travelDateStart || travelDateEnd) && (
+                        <>
+                          <button
+                            type="button"
+                            aria-label="When is most of the group flying?"
+                            aria-expanded={showFlightInfo}
+                            onClick={() => setShowFlightInfo((v) => !v)}
+                            onBlur={() => setShowFlightInfo(false)}
+                            className="w-4 h-4 -mt-0.5 rounded-full border border-gold text-gold text-[10px] leading-none font-body inline-flex items-center justify-center align-middle hover:bg-gold hover:text-white transition-colors"
+                          >
+                            ?
+                          </button>
+                          {showFlightInfo && (
+                            <span className="absolute bottom-full mb-1.5 left-0 right-0 bg-white border border-gold-pale shadow-md p-3 font-body font-light text-[12px] text-ink-soft leading-relaxed z-10">
+                              Most of the group arrives{" "}
+                              {formatDeadline(travelDateStart) || travelDateStart} and heads
+                              home {formatDeadline(travelDateEnd) || travelDateEnd}.
+                            </span>
+                          )}
+                        </>
+                      )}
                     </p>
                     <button
                       onClick={() => {
