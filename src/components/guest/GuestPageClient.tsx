@@ -467,7 +467,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
   }
 
   const inputClass =
-    "w-full px-4 py-3 bg-white border border-gold-pale rounded-none text-sm font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold transition-colors";
+    "w-full px-4 py-3 bg-white border border-gold-pale rounded-none text-[15px] font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold transition-colors";
 
   return (
     <div className="min-h-dvh bg-sand flex items-center justify-center p-4 sm:p-8">
@@ -484,7 +484,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
 
         {/* Status strip */}
         {showStrip && (rsvpSubmitted || rsvpDeadlineDate) && (
-          <div className="sticky top-2 z-20 mx-4 mt-4 px-4 py-3 bg-[#FBF3EA] border border-gold/30 shadow-sm flex items-center justify-center gap-x-3 gap-y-1 flex-wrap text-[11px] tracking-[1.5px] uppercase text-ink-soft">
+          <div className="sticky top-2 z-20 mx-4 mt-4 px-4 py-3 bg-[#FBF3EA] border border-gold/30 shadow-sm flex items-center justify-center gap-x-3 gap-y-1 flex-wrap text-[12px] tracking-[1.5px] uppercase text-ink-soft">
             {!rsvpSubmitted ? (
               <>
                 <span className="inline-flex items-center gap-1.5">
@@ -613,7 +613,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
           {note && (
             <div className="mb-8 animate-fadeUp animation-delay-500">
               <div className="w-8 h-px bg-gold mx-auto mb-4" />
-              <p className="font-display italic text-base text-ink-soft leading-relaxed px-4">
+              <p className="font-display italic text-[17px] text-ink-soft leading-relaxed px-4">
                 &ldquo;{note}&rdquo;
               </p>
             </div>
@@ -717,7 +717,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="w-full py-3.5 bg-gold text-white font-body font-normal text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors disabled:opacity-50"
+                    className="w-full py-3.5 bg-gold text-white font-body font-medium text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors disabled:opacity-50"
                   >
                     {submitting ? "Sending..." : "Submit Address"}
                   </button>
@@ -767,7 +767,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                     </p>
                     {rsvpMembers.filter((m) => m.firstName).map((m) => (
                       <div key={m.id} className="flex items-center gap-3 flex-wrap py-2.5 border-b border-gold-pale/50 last:border-0">
-                        <span className="font-body text-sm text-ink flex-1">
+                        <span className="font-body text-[15px] text-ink flex-1">
                           {m.firstName} {m.lastName}
                           {m.isChild && <span className="text-xs text-ink-faint ml-1.5">(child)</span>}
                         </span>
@@ -789,7 +789,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                             </div>
                           ) : (
                             <>
-                              <span className="font-display italic text-base text-ink-soft">{mealLabel(m.foodChoice)}</span>
+                              <span className="font-display italic text-[17px] text-ink-soft">{mealLabel(m.foodChoice)}</span>
                               {mealChangeOpen && (
                                 <button
                                   onClick={() => setEditingMealId(m.id)}
@@ -801,17 +801,17 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                             </>
                           )
                         ) : (
-                          <span className="font-display italic text-base text-ink-faint">Not attending</span>
+                          <span className="font-display italic text-[17px] text-ink-faint">Not attending</span>
                         )}
                       </div>
                     ))}
                     {kidsInterest && !rsvpMembers.some((m) => m.isChild && m.rsvpStatus === "coming") && (
                       <div className="flex items-center gap-3 py-2.5 border-b border-gold-pale/50 last:border-0">
-                        <span className="font-body text-sm text-ink flex-1">Children</span>
-                        <span className="font-display italic text-base text-ink-soft">Interested — names to come</span>
+                        <span className="font-body text-[15px] text-ink flex-1">Children</span>
+                        <span className="font-display italic text-[17px] text-ink-soft">Interested — names to come</span>
                       </div>
                     )}
-                    <p className="font-body font-light text-[11px] text-ink-faint text-center mt-3 leading-relaxed">
+                    <p className="font-body font-light text-[12px] text-ink-faint text-center mt-3 leading-relaxed">
                       {anyoneComing ? (
                         mealChangeOpen ? (
                           <>
@@ -830,14 +830,14 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                 </div>
               ) : (
                 <div className="space-y-4 text-left">
-                  <p className="font-body font-light text-[11px] tracking-[2px] uppercase text-ink-soft text-center mb-4">
+                  <p className="font-body font-light text-[12px] tracking-[2px] uppercase text-ink-soft text-center mb-4">
                     RSVP for your household
                   </p>
 
                   {rsvpMembers.map((m, i) => (
                     <div key={m.id} className="border border-gold-pale/40 p-4 space-y-3">
                       <div className="flex items-baseline justify-between">
-                        <p className="font-body font-medium text-sm text-ink">
+                        <p className="font-body font-medium text-[15px] text-ink">
                           {m.firstName} {m.lastName}
                           {m.isChild && <span className="text-xs text-ink-faint ml-2">(child)</span>}
                         </p>
@@ -912,7 +912,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                   {/* Plus one */}
                   {guest.plusOneAllowed && (
                     <div className="border border-gold-pale/40 p-4 space-y-3">
-                      <label className="flex items-center gap-2 font-body text-sm text-ink cursor-pointer">
+                      <label className="flex items-center gap-2 font-body text-[15px] text-ink cursor-pointer">
                         <input type="checkbox" checked={showPlusOne} onChange={(e) => setShowPlusOne(e.target.checked)} />
                         I&apos;d like to bring a plus one
                       </label>
@@ -944,7 +944,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
 
                   {/* Kids interest */}
                   <div className="border border-dashed border-gold-pale p-4 space-y-3">
-                    <label className="flex items-center gap-2 font-body text-sm text-ink cursor-pointer">
+                    <label className="flex items-center gap-2 font-body text-[15px] text-ink cursor-pointer">
                       <input
                         type="checkbox"
                         checked={kidsInterest}
@@ -988,7 +988,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                   <button
                     onClick={handleRsvpSubmit}
                     disabled={rsvpSubmitting}
-                    className="w-full py-3.5 bg-gold text-white font-body font-normal text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors disabled:opacity-50"
+                    className="w-full py-3.5 bg-gold text-white font-body font-medium text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors disabled:opacity-50"
                   >
                     {rsvpSubmitting ? "Submitting..." : "Submit RSVP"}
                   </button>
@@ -1011,10 +1011,10 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
           {(phase === "rsvp" || phase === "checklist") && eventSchedule.length > 0 && (
             <div className="mt-8 animate-fadeUp animation-delay-700">
               <div className="w-10 h-px bg-gold mx-auto mb-6" />
-              <p className="font-body font-normal text-[10px] tracking-[6px] uppercase text-gold text-center mb-2">
+              <p className="font-body font-medium text-[11px] tracking-[5px] uppercase text-gold text-center mb-2">
                 The Weekend
               </p>
-              <p className="font-body font-light text-xs text-ink-soft text-center mb-4">
+              <p className="font-body font-light text-[13px] text-ink-soft text-center mb-4">
                 Plan your flights around the whole weekend.
               </p>
               <div className="text-left">
@@ -1022,19 +1022,19 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                   <div key={i} className="border-b border-gold-pale/40 last:border-0 py-4 first:pt-0">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className="font-display text-base text-ink">{event.name}</p>
-                        <p className="font-body font-light text-xs text-ink-soft mt-0.5">
+                        <p className="font-display font-medium text-[19px] text-ink">{event.name}</p>
+                        <p className="font-body font-light text-[13px] text-ink-soft mt-0.5">
                           {event.location}
                         </p>
                         {event.notes && (
-                          <p className="font-body font-light text-xs text-ink-faint mt-1 italic">
+                          <p className="font-body font-light text-[13px] text-ink-faint mt-1 italic">
                             {event.notes}
                           </p>
                         )}
                       </div>
                       <div className="text-right shrink-0">
-                        <p className="font-body text-xs text-ink-soft">{event.date}</p>
-                        <p className="font-display text-sm text-gold">{event.time}</p>
+                        <p className="font-body text-[13px] text-ink-soft">{event.date}</p>
+                        <p className="font-display font-medium text-base text-gold">{event.time}</p>
                       </div>
                     </div>
                   </div>
@@ -1087,26 +1087,26 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                 </div>
               ) : (
                 <div className="space-y-4 text-left">
-                  <p className="font-body font-light text-[11px] tracking-[2px] uppercase text-ink-soft text-center mb-4">
+                  <p className="font-body font-light text-[12px] tracking-[2px] uppercase text-ink-soft text-center mb-4">
                     Getting there
                   </p>
 
                   {/* Step 1 — room block card */}
                   {hasBookingCard && (
                     <div className="border border-gold/30 bg-gold/5 p-5">
-                      <p className="font-body text-[10px] tracking-[2px] uppercase text-gold mb-2">
+                      <p className="font-body text-[11px] tracking-[2px] uppercase text-gold mb-2">
                         Step 1 — Book your room
                       </p>
-                      <p className="font-body font-light text-sm text-ink-soft mb-4">
+                      <p className="font-body font-light text-[15px] text-ink-soft mb-4">
                         Book through our room block to stay with the group at our rate.
                       </p>
                       {roomBlockLink && (
-                        <a href={roomBlockLink} target="_blank" rel="noopener" className="block py-3.5 text-center bg-gold text-white font-body font-normal text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors">
+                        <a href={roomBlockLink} target="_blank" rel="noopener" className="block py-3.5 text-center bg-gold text-white font-body font-medium text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors">
                           Book Your Room
                         </a>
                       )}
                       {roomBlockCode && (
-                        <p className="font-body font-light text-[11px] text-ink-soft mt-3 leading-relaxed">
+                        <p className="font-body font-light text-[12px] text-ink-soft mt-3 leading-relaxed">
                           Group code:{" "}
                           <code className="font-body font-medium tracking-wide text-ink bg-white border border-gold-pale px-1.5 py-0.5">
                             {roomBlockCode}
@@ -1115,7 +1115,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                         </p>
                       )}
                       {roomBlockDeadline && (
-                        <p className="font-body text-[10px] tracking-[1.5px] uppercase text-gold mt-2">
+                        <p className="font-body text-[11px] tracking-[1.5px] uppercase text-gold mt-2">
                           Room block held until {formatDeadline(roomBlockDeadline)}
                         </p>
                       )}
@@ -1124,10 +1124,10 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
 
                   {/* Step 2 — flights card */}
                   <div className="border border-gold/30 bg-gold/5 p-5">
-                    <p className="font-body text-[10px] tracking-[2px] uppercase text-gold mb-2">
+                    <p className="font-body text-[11px] tracking-[2px] uppercase text-gold mb-2">
                       Step {flightsStepNum} — Book your flights
                     </p>
-                    <p className="font-body font-light text-sm text-ink-soft mb-4">
+                    <p className="font-body font-light text-[15px] text-ink-soft mb-4">
                       Fly into Cancún ({destinationAirport}) — most of the group arrives{" "}
                       {formatDeadline(travelDateStart) || travelDateStart} and heads home{" "}
                       {formatDeadline(travelDateEnd) || travelDateEnd}.
@@ -1142,7 +1142,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                           window.open(getFlightsUrl(), "_blank");
                         }
                       }}
-                      className="w-full py-3.5 text-center border-2 border-gold text-gold font-body font-normal text-[13px] tracking-[3px] uppercase hover:bg-gold hover:text-white transition-colors"
+                      className="w-full py-3.5 text-center border-2 border-gold text-gold font-body font-medium text-[13px] tracking-[3px] uppercase hover:bg-gold hover:text-white transition-colors"
                     >
                       Search Flights
                     </button>
@@ -1150,10 +1150,10 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
 
                   {/* Step 3 — checklist heading */}
                   <div className="pt-2">
-                    <p className="font-body text-[10px] tracking-[2px] uppercase text-gold text-center mb-1">
+                    <p className="font-body text-[11px] tracking-[2px] uppercase text-gold text-center mb-1">
                       Step {checklistStepNum} — Your checklist
                     </p>
-                    <p className="font-body font-light text-[11px] text-ink-faint text-center mb-3">
+                    <p className="font-body font-light text-[12px] text-ink-faint text-center mb-3">
                       Check things off as you book, then submit at the bottom — you can update it anytime.
                     </p>
                   </div>
@@ -1161,16 +1161,16 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                   {/* Per-person checklist */}
                   {memberChecklist.map((m, i) => (
                     <div key={m.id} className="border border-gold-pale/40 p-4 space-y-3">
-                      <p className="font-body font-medium text-sm text-ink">{m.firstName} {m.lastName}</p>
+                      <p className="font-body font-medium text-[15px] text-ink">{m.firstName} {m.lastName}</p>
 
-                      <label className="flex items-center gap-2 font-body text-sm text-ink">
+                      <label className="flex items-center gap-2 font-body text-[15px] text-ink">
                         <input type="checkbox" checked={m.passportConfirmed} onChange={(e) => {
                           const arr = [...memberChecklist]; arr[i] = { ...arr[i], passportConfirmed: e.target.checked }; setMemberChecklist(arr);
                         }} />
                         Valid passport (expires after April 2027)
                       </label>
 
-                      <label className="flex items-center gap-2 font-body text-sm text-ink">
+                      <label className="flex items-center gap-2 font-body text-[15px] text-ink">
                         <input type="checkbox" checked={m.flightsBooked} onChange={(e) => {
                           const arr = [...memberChecklist]; arr[i] = { ...arr[i], flightsBooked: e.target.checked }; setMemberChecklist(arr);
                         }} />
@@ -1209,7 +1209,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                         </div>
                       )}
 
-                      <label className="flex items-center gap-2 font-body text-sm text-ink">
+                      <label className="flex items-center gap-2 font-body text-[15px] text-ink">
                         <input type="checkbox" checked={m.hotelBooked} onChange={(e) => {
                           const arr = [...memberChecklist]; arr[i] = { ...arr[i], hotelBooked: e.target.checked }; setMemberChecklist(arr);
                         }} />
@@ -1227,7 +1227,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                       We booked outside the room block
                     </label>
 
-                    <label className="flex items-center gap-2 font-body text-sm text-ink">
+                    <label className="flex items-center gap-2 font-body text-[15px] text-ink">
                       <input type="checkbox" checked={checklist.transportNeeded} onChange={(e) => setChecklist({ ...checklist, transportNeeded: e.target.checked })} />
                       We need airport transportation
                     </label>
@@ -1266,7 +1266,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                   <button
                     onClick={handleChecklistSubmit}
                     disabled={checklistSubmitting}
-                    className="w-full py-3.5 bg-gold text-white font-body font-normal text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors disabled:opacity-50"
+                    className="w-full py-3.5 bg-gold text-white font-body font-medium text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors disabled:opacity-50"
                   >
                     {checklistSubmitting ? "Submitting..." : "Submit Checklist"}
                   </button>
@@ -1290,7 +1290,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                   href={resortMapUrl}
                   target="_blank"
                   rel="noopener"
-                  className="block py-3.5 text-center bg-gold text-white font-body font-normal text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors mb-4"
+                  className="block py-3.5 text-center bg-gold text-white font-body font-medium text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors mb-4"
                 >
                   View Resort Map
                 </a>
@@ -1299,26 +1299,26 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
               {/* Event schedule */}
               {eventSchedule.length > 0 && (
                 <div className="space-y-0">
-                  <p className="font-body font-light text-[11px] tracking-[2px] uppercase text-ink-soft text-center mb-4">
+                  <p className="font-body font-light text-[12px] tracking-[2px] uppercase text-ink-soft text-center mb-4">
                     Schedule of events
                   </p>
                   {eventSchedule.map((event, i) => (
                     <div key={i} className="border-b border-gold-pale/40 last:border-0 py-4 first:pt-0">
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <p className="font-display text-base text-ink">{event.name}</p>
-                          <p className="font-body font-light text-xs text-ink-soft mt-0.5">
+                          <p className="font-display font-medium text-[19px] text-ink">{event.name}</p>
+                          <p className="font-body font-light text-[13px] text-ink-soft mt-0.5">
                             {event.location}
                           </p>
                           {event.notes && (
-                            <p className="font-body font-light text-xs text-ink-faint mt-1 italic">
+                            <p className="font-body font-light text-[13px] text-ink-faint mt-1 italic">
                               {event.notes}
                             </p>
                           )}
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="font-body text-xs text-ink-soft">{event.date}</p>
-                          <p className="font-display text-sm text-gold">{event.time}</p>
+                          <p className="font-body text-[13px] text-ink-soft">{event.date}</p>
+                          <p className="font-display font-medium text-base text-gold">{event.time}</p>
                         </div>
                       </div>
                     </div>
