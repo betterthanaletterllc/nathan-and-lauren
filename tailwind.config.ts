@@ -10,8 +10,8 @@ const config: Config = {
         ink: { DEFAULT: "#2C2A26", soft: "#6B6660", faint: "#9B958D" },
       },
       fontFamily: {
-        display: ['"Cormorant Garamond"', "serif"],
-        body: ['"Jost"', "sans-serif"],
+        display: ["var(--font-display)", "Georgia", "serif"],
+        body: ["var(--font-body)", "system-ui", "sans-serif"],
       },
     },
   },
