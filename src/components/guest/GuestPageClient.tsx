@@ -1113,7 +1113,8 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                           <code className="font-body font-medium tracking-wide uppercase text-ink bg-white border border-gold-pale px-1.5 py-0.5">
                             {roomBlockCode}
                           </code>{" "}
-                          — use it if you book by phone or on your own.
+                          — enter it in the promotional-code box if it isn&apos;t already
+                          applied, or read it to the agent if you book by phone.
                         </p>
                       )}
                       {roomBlockDeadline && (

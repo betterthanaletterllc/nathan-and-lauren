@@ -76,9 +76,11 @@ export default async function GuestPage({ params }: Props) {
   const videoUrl = guest.videoUrl || config["global_video_url"] || "";
   // Real room-block deep link (Hyatt Inclusive Collection booking engine, Dreams Sapphire = drsrc).
   // Settings override these; fallbacks keep the booking card live even if settings are cleared.
-  // NOTE: cp param appears to be case-sensitive — lowercase failed, this exact casing works.
+  // NOTE: cp param is case-sensitive (lowercase fails). Minimal param set on purpose —
+  // the occupancies JSON param is redundant with the /2/0/ path and broke once when
+  // double-encoded in email transit. Verified prefilling dates + code 2026-08-02.
   const DEFAULT_ROOM_BLOCK_LINK =
-    "https://bookings.hyattinclusivecollection.com/bookcore/availability/drsrc/2027-02-24/2027-02-28/2/0/?cp=ButoracWonderlyWedd&rrc=1&adults=2&occupancies=%255B%257B%2522adults%2522%253A%25202%252C%2520%2522children%2522%253A%25200%252C%2520%2522ages%2522%253A%2520%2522%2522%257D%255D&occp=1";
+    "https://bookings.hyattinclusivecollection.com/bookcore/availability/drsrc/2027-02-24/2027-02-28/2/0/?cp=ButoracWonderlyWedd&rrc=1";
   const roomBlockLink = config["room_block_link"] || DEFAULT_ROOM_BLOCK_LINK;
   const roomBlockCode = config["room_block_code"] || "BUTORACWONDERLYWEDD";
   const roomBlockDeadline = config["room_block_deadline"] || "";
