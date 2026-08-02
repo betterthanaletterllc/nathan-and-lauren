@@ -1474,18 +1474,77 @@ export default function DashboardClient() {
               />
             </div>
 
-            {/* Room block link */}
-            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
-              <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block mb-2">
-                Room block booking link
+            {/* Deadlines */}
+            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6 space-y-4">
+              <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block">
+                Deadlines
               </label>
-              <input
-                type="text"
-                defaultValue={settings["room_block_link"] || ""}
-                onBlur={(e) => updatePending("room_block_link", e.target.value)}
-                placeholder="https://..."
-                className="w-full px-4 py-3 bg-white border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
-              />
+              <p className="font-body text-xs text-ink-faint">
+                RSVP deadline drives the &ldquo;days left&rdquo; countdown on guest pages.
+                Meal-change deadline is when dinner selections lock.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-body text-[10px] tracking-[1px] uppercase text-ink-faint block mb-1">RSVP deadline</label>
+                  <input
+                    type="date"
+                    defaultValue={settings["rsvp_deadline"] || ""}
+                    onBlur={(e) => updatePending("rsvp_deadline", e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-gold-pale text-sm font-body font-light text-ink focus:outline-none focus:border-gold"
+                  />
+                </div>
+                <div>
+                  <label className="font-body text-[10px] tracking-[1px] uppercase text-ink-faint block mb-1">Meal changes lock</label>
+                  <input
+                    type="date"
+                    defaultValue={settings["meal_change_deadline"] || ""}
+                    onBlur={(e) => updatePending("meal_change_deadline", e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-gold-pale text-sm font-body font-light text-ink focus:outline-none focus:border-gold"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Room block */}
+            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6 space-y-4">
+              <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block">
+                Room block
+              </label>
+              <div>
+                <label className="font-body text-[10px] tracking-[1px] uppercase text-ink-faint block mb-1">Booking link</label>
+                <input
+                  type="text"
+                  defaultValue={settings["room_block_link"] || ""}
+                  onBlur={(e) => updatePending("room_block_link", e.target.value)}
+                  placeholder="https://..."
+                  className="w-full px-4 py-3 bg-white border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-body text-[10px] tracking-[1px] uppercase text-ink-faint block mb-1">Group code</label>
+                  <input
+                    type="text"
+                    defaultValue={settings["room_block_code"] || ""}
+                    onBlur={(e) => updatePending("room_block_code", e.target.value)}
+                    placeholder="butoracwonderlywedd"
+                    className="w-full px-3 py-2 bg-white border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
+                  />
+                </div>
+                <div>
+                  <label className="font-body text-[10px] tracking-[1px] uppercase text-ink-faint block mb-1">Block held until</label>
+                  <input
+                    type="date"
+                    defaultValue={settings["room_block_deadline"] || ""}
+                    onBlur={(e) => updatePending("room_block_deadline", e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-gold-pale text-sm font-body font-light text-ink focus:outline-none focus:border-gold"
+                  />
+                </div>
+              </div>
+              <p className="font-body text-xs text-ink-faint">
+                The code is shown in small print under the booking button so guests who
+                book by phone or on their own still count toward the block.
+              </p>
             </div>
 
             {/* Travel settings */}

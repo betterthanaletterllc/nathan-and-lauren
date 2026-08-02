@@ -75,6 +75,9 @@ export default async function GuestPage({ params }: Props) {
   const phase = guest.phaseOverride || globalPhase;
   const videoUrl = guest.videoUrl || config["global_video_url"] || "";
   const roomBlockLink = config["room_block_link"] || "";
+  const roomBlockCode = config["room_block_code"] || "";
+  const roomBlockDeadline = config["room_block_deadline"] || "";
+  const rsvpDeadline = config["rsvp_deadline"] || "";
   const destinationAirport = config["destination_airport"] || "CUN";
   const travelDateStart = config["travel_date_start"] || "2027-02-25";
   const travelDateEnd = config["travel_date_end"] || "2027-02-28";
@@ -137,6 +140,9 @@ export default async function GuestPage({ params }: Props) {
       phase={phase}
       videoUrl={videoUrl}
       roomBlockLink={roomBlockLink}
+      roomBlockCode={roomBlockCode}
+      roomBlockDeadline={roomBlockDeadline}
+      rsvpDeadline={rsvpDeadline}
       destinationAirport={destinationAirport}
       travelDateStart={travelDateStart}
       travelDateEnd={travelDateEnd}

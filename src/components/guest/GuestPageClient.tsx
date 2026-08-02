@@ -47,6 +47,9 @@ interface Props {
   phase: string;
   videoUrl: string;
   roomBlockLink: string;
+  roomBlockCode: string;
+  roomBlockDeadline: string;
+  rsvpDeadline: string;
   destinationAirport: string;
   travelDateStart: string;
   travelDateEnd: string;
@@ -55,7 +58,7 @@ interface Props {
   eventSchedule: { name: string; date: string; time: string; location: string; notes: string }[];
 }
 
-export default function GuestPageClient({ guest, members: initialMembers, note, phase, videoUrl, roomBlockLink, destinationAirport, travelDateStart, travelDateEnd, foodOptions, resortMapUrl, eventSchedule }: Props) {
+export default function GuestPageClient({ guest, members: initialMembers, note, phase, videoUrl, roomBlockLink, roomBlockCode, roomBlockDeadline, rsvpDeadline, destinationAirport, travelDateStart, travelDateEnd, foodOptions, resortMapUrl, eventSchedule }: Props) {
   const [submitted, setSubmitted] = useState(guest.addressSubmitted);
   const [submitting, setSubmitting] = useState(false);
   const [rsvpSubmitted, setRsvpSubmitted] = useState(guest.rsvpSubmitted);
@@ -122,6 +125,28 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
     minutes: Math.floor((diff / 60000) % 60),
     seconds: Math.floor((diff / 1000) % 60),
   };
+
+  // Deadline helpers — parse YYYY-MM-DD as LOCAL date (new Date("YYYY-MM-DD") is UTC and shifts a day)
+  function parseLocalDate(dateStr: string): Date | null {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr || "");
+    if (!m) return null;
+    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 23, 59, 59);
+  }
+  function formatDeadline(dateStr: string): string {
+    const d = parseLocalDate(dateStr);
+    return d ? d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+  }
+  const rsvpDeadlineDate = parseLocalDate(rsvpDeadline);
+  const rsvpDaysLeft = rsvpDeadlineDate ? Math.max(0, Math.ceil((rsvpDeadlineDate.getTime() - now) / 86400000)) : null;
+
+  // Status strip (rsvp phase onward)
+  const showStrip = phase === "rsvp" || phase === "checklist" || phase === "final";
+  const checklistTotal = memberChecklist.length * 3;
+  const checklistDone = memberChecklist.reduce(
+    (s, m) => s + (m.passportConfirmed ? 1 : 0) + (m.flightsBooked ? 1 : 0) + (m.hotelBooked ? 1 : 0),
+    0
+  );
+  const anyoneComing = rsvpMembers.some((m) => m.rsvpStatus === "coming");
 
   // Geolocation for nearest airport
   const [userAirport, setUserAirport] = useState("");
@@ -315,6 +340,40 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
         {/* Gold top line */}
         <div className="absolute top-3 left-8 right-8 h-px bg-gradient-to-r from-transparent via-gold to-transparent" />
         <div className="absolute bottom-3 left-8 right-8 h-px bg-gradient-to-r from-transparent via-gold to-transparent" />
+
+        {/* Status strip */}
+        {showStrip && (rsvpSubmitted || rsvpDeadlineDate) && (
+          <div className="sticky top-2 z-20 mx-4 mt-4 px-4 py-3 bg-[#FBF3EA] border border-gold/30 shadow-sm flex items-center justify-center gap-x-3 gap-y-1 flex-wrap text-[11px] tracking-[1.5px] uppercase text-ink-soft">
+            {!rsvpSubmitted ? (
+              <>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-1 h-1 rounded-full bg-gold" />
+                  <span>
+                    RSVP by <b className="font-medium text-ink">{formatDeadline(rsvpDeadline)}</b>
+                  </span>
+                </span>
+                {rsvpDaysLeft !== null && (
+                  <span className="text-gold font-medium">
+                    {rsvpDaysLeft} {rsvpDaysLeft === 1 ? "day" : "days"} left
+                  </span>
+                )}
+              </>
+            ) : (
+              <>
+                <span className="text-[#6E8060] font-medium">✓ RSVP&apos;d</span>
+                {anyoneComing && (phase === "checklist" || phase === "final") && checklistTotal > 0 && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="w-1 h-1 rounded-full bg-gold" />
+                    <span>
+                      Checklist <b className="font-medium text-ink">{checklistDone} of {checklistTotal}</b>
+                    </span>
+                  </span>
+                )}
+                {!anyoneComing && <span>We&apos;ll miss you</span>}
+              </>
+            )}
+          </div>
+        )}
 
         <div className="px-8 py-12 sm:px-10 sm:py-14 text-center">
           {/* Save the Date */}
@@ -681,6 +740,44 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
             </div>
           )}
 
+          {/* The Weekend — event schedule, visible from the RSVP phase so guests
+              can book flights around the full weekend (arrived/final phases show
+              their own schedule in the live guide below) */}
+          {(phase === "rsvp" || phase === "checklist") && eventSchedule.length > 0 && (
+            <div className="mt-8 animate-fadeUp animation-delay-700">
+              <div className="w-10 h-px bg-gold mx-auto mb-6" />
+              <p className="font-body font-normal text-[10px] tracking-[6px] uppercase text-gold text-center mb-2">
+                The Weekend
+              </p>
+              <p className="font-body font-light text-xs text-ink-soft text-center mb-4">
+                Plan your flights around the whole weekend.
+              </p>
+              <div className="text-left">
+                {eventSchedule.map((event, i) => (
+                  <div key={i} className="border-b border-gold-pale/40 last:border-0 py-4 first:pt-0">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="font-display text-base text-ink">{event.name}</p>
+                        <p className="font-body font-light text-xs text-ink-soft mt-0.5">
+                          {event.location}
+                        </p>
+                        {event.notes && (
+                          <p className="font-body font-light text-xs text-ink-faint mt-1 italic">
+                            {event.notes}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="font-body text-xs text-ink-soft">{event.date}</p>
+                        <p className="font-display text-sm text-gold">{event.time}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Travel Checklist */}
           {(phase === "checklist" || phase === "final") && rsvpSubmitted && rsvpMembers.some((m) => m.rsvpStatus === "coming") && (
             <div className="mt-8 animate-fadeUp animation-delay-700">
@@ -728,11 +825,35 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                     Travel checklist
                   </p>
 
-                  {/* Book Hotel Button */}
-                  {roomBlockLink && (
-                    <a href={roomBlockLink} target="_blank" rel="noopener" className="block py-3.5 text-center bg-gold text-white font-body font-normal text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors">
-                      Book Hotel Room
-                    </a>
+                  {/* Where to stay — room block card */}
+                  {(roomBlockLink || roomBlockCode) && (
+                    <div className="border border-gold/30 bg-gold/5 p-5">
+                      <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint mb-2">
+                        Where to stay
+                      </p>
+                      <p className="font-body font-light text-sm text-ink-soft mb-4">
+                        Book through our room block to stay with the group at our rate.
+                      </p>
+                      {roomBlockLink && (
+                        <a href={roomBlockLink} target="_blank" rel="noopener" className="block py-3.5 text-center bg-gold text-white font-body font-normal text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors">
+                          Book Your Room
+                        </a>
+                      )}
+                      {roomBlockCode && (
+                        <p className="font-body font-light text-[11px] text-ink-soft mt-3 leading-relaxed">
+                          Group code:{" "}
+                          <code className="font-body font-medium tracking-wide text-ink bg-white border border-gold-pale px-1.5 py-0.5">
+                            {roomBlockCode}
+                          </code>{" "}
+                          — use it if you book by phone or on your own.
+                        </p>
+                      )}
+                      {roomBlockDeadline && (
+                        <p className="font-body text-[10px] tracking-[1.5px] uppercase text-gold mt-2">
+                          Room block held until {formatDeadline(roomBlockDeadline)}
+                        </p>
+                      )}
+                    </div>
                   )}
 
                   {/* Book Flights Button */}
