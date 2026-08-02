@@ -33,6 +33,38 @@ export default function LandingPage() {
 
   useEffect(() => setMounted(true), []);
 
+  // Find your invitation
+  const [findQuery, setFindQuery] = useState("");
+  const [findError, setFindError] = useState("");
+  const [finding, setFinding] = useState(false);
+
+  async function handleFind(e: React.FormEvent) {
+    e.preventDefault();
+    if (!findQuery.trim() || finding) return;
+    setFinding(true);
+    setFindError("");
+    try {
+      const res = await fetch("/api/find-invitation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: findQuery }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.slug) {
+        window.location.href = `/guest/${data.slug}`;
+      } else if (res.status === 429) {
+        setFindError("Too many tries — give it a minute and try again.");
+        setFinding(false);
+      } else {
+        setFindError("Hmm, we couldn’t find that one — double-check the spelling, or text Nathan & Lauren.");
+        setFinding(false);
+      }
+    } catch {
+      setFindError("Something went wrong — please try again.");
+      setFinding(false);
+    }
+  }
+
   return (
     <div className="min-h-dvh bg-sand flex items-center justify-center p-4 sm:p-8 relative overflow-hidden">
       {/* Subtle background decoration */}
@@ -157,6 +189,36 @@ export default function LandingPage() {
             </div>
           ) : (
             <div className="h-[96px]" />
+          )}
+        </div>
+
+        {/* Find your invitation */}
+        <div className="mt-12 border border-gold/30 bg-gold/5 p-6 sm:p-7 text-left animate-fadeUp animation-delay-500">
+          <p className="font-body font-normal text-[10px] tracking-[4px] uppercase text-gold text-center mb-2">
+            Find your invitation
+          </p>
+          <p className="font-body font-light text-xs text-ink-soft text-center mb-4">
+            Look yourself up to see your RSVP, travel details, and the weekend schedule.
+          </p>
+          <form onSubmit={handleFind} className="flex gap-2">
+            <input
+              type="text"
+              value={findQuery}
+              onChange={(e) => { setFindQuery(e.target.value); setFindError(""); }}
+              placeholder="Name or phone number"
+              aria-label="Your name or phone number"
+              className="flex-1 min-w-0 px-4 py-3 bg-white border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
+            />
+            <button
+              type="submit"
+              disabled={finding}
+              className="px-6 py-3 bg-gold text-white font-body font-normal text-[12px] tracking-[3px] uppercase hover:bg-gold-light transition-colors disabled:opacity-60"
+            >
+              {finding ? "..." : "Find"}
+            </button>
+          </form>
+          {findError && (
+            <p className="font-body font-light text-xs text-[#A0522D] text-center mt-3">{findError}</p>
           )}
         </div>
 
