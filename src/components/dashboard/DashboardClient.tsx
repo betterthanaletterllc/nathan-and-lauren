@@ -1516,9 +1516,13 @@ export default function DashboardClient() {
                   type="text"
                   defaultValue={settings["room_block_link"] || ""}
                   onBlur={(e) => updatePending("room_block_link", e.target.value)}
-                  placeholder="https://..."
+                  placeholder="Leave blank — uses the verified group booking link"
                   className="w-full px-4 py-3 bg-white border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
                 />
+                <p className="font-body text-[11px] text-ink-faint mt-1">
+                  Anything typed here overrides the built-in verified link. Leave blank
+                  unless the resort issues a new booking URL.
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -1527,7 +1531,7 @@ export default function DashboardClient() {
                     type="text"
                     defaultValue={settings["room_block_code"] || ""}
                     onBlur={(e) => updatePending("room_block_code", e.target.value)}
-                    placeholder="butoracwonderlywedd"
+                    placeholder="Blank = BUTORACWONDERLYWEDD"
                     className="w-full px-3 py-2 bg-white border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
                   />
                 </div>
