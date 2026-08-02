@@ -1098,7 +1098,9 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                         Step 1 — Book your room
                       </p>
                       <p className="font-body font-light text-[15px] text-ink-soft mb-4">
-                        Book through our room block to stay with the group at our rate.
+                        Book through our room block to stay with the group at our rate. The
+                        group rate covers stays between Feb 2 and Mar 4 — come early or stay
+                        late if you&apos;d like.
                       </p>
                       {roomBlockLink && (
                         <a href={roomBlockLink} target="_blank" rel="noopener" className="block py-3.5 text-center bg-gold text-white font-body font-medium text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors">

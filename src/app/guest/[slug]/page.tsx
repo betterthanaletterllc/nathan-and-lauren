@@ -74,8 +74,12 @@ export default async function GuestPage({ params }: Props) {
   const globalPhase = config["guest_page_phase"] || "save_the_date";
   const phase = guest.phaseOverride || globalPhase;
   const videoUrl = guest.videoUrl || config["global_video_url"] || "";
-  const roomBlockLink = config["room_block_link"] || "";
-  const roomBlockCode = config["room_block_code"] || "";
+  // Real room-block deep link (Hyatt Inclusive Collection booking engine, Dreams Sapphire = drsrc).
+  // Settings override these; fallbacks keep the booking card live even if settings are cleared.
+  const DEFAULT_ROOM_BLOCK_LINK =
+    "https://bookings.hyattinclusivecollection.com/bookcore/availability/drsrc/2027-02-24/2027-02-28/2/0/?cp=butoracwonderlywedd&rrc=1&adults=2&occupancies=%255B%257B%2522adults%2522%253A%25202%252C%2520%2522children%2522%253A%25200%252C%2520%2522ages%2522%253A%2520%2522%2522%257D%255D&occp=1";
+  const roomBlockLink = config["room_block_link"] || DEFAULT_ROOM_BLOCK_LINK;
+  const roomBlockCode = config["room_block_code"] || "butoracwonderlywedd";
   const roomBlockDeadline = config["room_block_deadline"] || "";
   const rsvpDeadline = config["rsvp_deadline"] || "";
   const mealChangeDeadline = config["meal_change_deadline"] || "";
