@@ -65,6 +65,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
   const [submitting, setSubmitting] = useState(false);
   const [rsvpSubmitted, setRsvpSubmitted] = useState(guest.rsvpSubmitted);
   const [checklistSubmitted, setChecklistSubmitted] = useState(guest.checklistSubmitted);
+  const [showRateInfo, setShowRateInfo] = useState(false);
   const [form, setForm] = useState({
     addressLine1: "",
     addressLine2: "",
@@ -1098,9 +1099,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                         Step 1 — Book your room
                       </p>
                       <p className="font-body font-light text-[15px] text-ink-soft mb-4">
-                        Book through our room block to stay with the group at our rate. The
-                        group rate covers stays between Feb 2 and Mar 4 — come early or stay
-                        late if you&apos;d like.
+                        Book through our room block to stay with the group at our rate.
                       </p>
                       {roomBlockLink && (
                         <a href={roomBlockLink} target="_blank" rel="noopener" className="block py-3.5 text-center bg-gold text-white font-body font-medium text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors">
@@ -1108,14 +1107,35 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                         </a>
                       )}
                       {roomBlockCode && (
-                        <p className="font-body font-light text-[12px] text-ink-soft mt-3 leading-relaxed">
-                          Group code:{" "}
-                          <code className="font-body font-medium tracking-wide uppercase text-ink bg-white border border-gold-pale px-1.5 py-0.5">
-                            {roomBlockCode}
-                          </code>{" "}
-                          — enter it in the promotional-code box if it isn&apos;t already
-                          applied, or read it to the agent if you book by phone.
-                        </p>
+                        <div className="mt-3">
+                          <p className="font-body font-light text-[12px] text-ink-soft leading-relaxed flex items-center flex-wrap gap-x-1.5 gap-y-1">
+                            <span>Group code:</span>
+                            <code className="font-body font-medium tracking-wide uppercase text-ink bg-white border border-gold-pale px-1.5 py-0.5">
+                              {roomBlockCode}
+                            </code>
+                            <span className="relative inline-flex">
+                              <button
+                                type="button"
+                                aria-label="When is the group code valid?"
+                                aria-expanded={showRateInfo}
+                                onClick={() => setShowRateInfo((v) => !v)}
+                                onBlur={() => setShowRateInfo(false)}
+                                className="w-4 h-4 rounded-full border border-gold text-gold text-[10px] leading-none font-body inline-flex items-center justify-center hover:bg-gold hover:text-white transition-colors"
+                              >
+                                ?
+                              </button>
+                              {showRateInfo && (
+                                <span className="absolute bottom-6 right-0 w-48 bg-white border border-gold-pale shadow-md p-3 font-body font-light text-[12px] text-ink-soft leading-relaxed z-10">
+                                  The group code is good for stays from Feb 2 to Mar 4,
+                                  2027 — come early or stay late and it still applies.
+                                </span>
+                              )}
+                            </span>
+                          </p>
+                          <p className="font-body font-light italic text-[11px] text-ink-faint mt-1.5">
+                            *Enter in the promotion code box if not already there
+                          </p>
+                        </div>
                       )}
                       {roomBlockDeadline && (
                         <p className="font-body text-[11px] tracking-[1.5px] uppercase text-gold mt-2">
