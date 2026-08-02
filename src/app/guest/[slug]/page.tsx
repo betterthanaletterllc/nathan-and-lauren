@@ -72,7 +72,13 @@ export default async function GuestPage({ params }: Props) {
   const note = guest.note || globalNote;
   const showTable = config["show_table_numbers"] === "true";
   const globalPhase = config["guest_page_phase"] || "save_the_date";
-  const phase = guest.phaseOverride || globalPhase;
+  let phase = guest.phaseOverride || globalPhase;
+  // Auto-advance: a household that has handed over its address is done with the
+  // save-the-date ask — show them the RSVP experience on their next visit.
+  // Only when riding the global phase; an explicit per-household override always wins.
+  if (phase === "save_the_date" && !guest.phaseOverride && guest.addressSubmittedAt) {
+    phase = "rsvp";
+  }
   const videoUrl = guest.videoUrl || config["global_video_url"] || "";
   // Real room-block deep link (Hyatt Inclusive Collection booking engine, Dreams Sapphire = drsrc).
   // Settings override these; fallbacks keep the booking card live even if settings are cleared.

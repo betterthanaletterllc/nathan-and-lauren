@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface MemberData {
   id: number;
@@ -255,6 +256,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
   }, [guest.slug]);
 
   const firstName = guest.displayName;
+  const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -265,7 +267,12 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug: guest.slug, ...form }),
       });
-      if (res.ok) setSubmitted(true);
+      if (res.ok) {
+        setSubmitted(true);
+        // Server auto-advances address-submitted households to the rsvp phase —
+        // refresh so the RSVP section appears in this same visit.
+        setTimeout(() => router.refresh(), 1600);
+      }
     } finally {
       setSubmitting(false);
     }
