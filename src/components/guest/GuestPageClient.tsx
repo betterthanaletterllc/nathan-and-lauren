@@ -188,6 +188,11 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
   );
   const anyoneComing = rsvpMembers.some((m) => m.rsvpStatus === "coming");
 
+  // Travel section step numbering (hotel card only renders when configured)
+  const hasBookingCard = !!(roomBlockLink || roomBlockCode);
+  const flightsStepNum = hasBookingCard ? 2 : 1;
+  const checklistStepNum = flightsStepNum + 1;
+
   // Geolocation for nearest airport
   const [userAirport, setUserAirport] = useState("");
   function findNearestAirport() {
@@ -1083,14 +1088,14 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
               ) : (
                 <div className="space-y-4 text-left">
                   <p className="font-body font-light text-[11px] tracking-[2px] uppercase text-ink-soft text-center mb-4">
-                    Travel checklist
+                    Getting there
                   </p>
 
-                  {/* Where to stay — room block card */}
-                  {(roomBlockLink || roomBlockCode) && (
+                  {/* Step 1 — room block card */}
+                  {hasBookingCard && (
                     <div className="border border-gold/30 bg-gold/5 p-5">
-                      <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint mb-2">
-                        Where to stay
+                      <p className="font-body text-[10px] tracking-[2px] uppercase text-gold mb-2">
+                        Step 1 — Book your room
                       </p>
                       <p className="font-body font-light text-sm text-ink-soft mb-4">
                         Book through our room block to stay with the group at our rate.
@@ -1117,21 +1122,41 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                     </div>
                   )}
 
-                  {/* Book Flights Button */}
-                  <button
-                    onClick={() => {
-                      if (!userAirport) {
-                        findNearestAirport();
-                        // Open with no origin for now, geolocation will update
-                        window.open(getFlightsUrl(), "_blank");
-                      } else {
-                        window.open(getFlightsUrl(), "_blank");
-                      }
-                    }}
-                    className="w-full py-3.5 text-center border-2 border-gold text-gold font-body font-normal text-[13px] tracking-[3px] uppercase hover:bg-gold hover:text-white transition-colors"
-                  >
-                    Search Flights
-                  </button>
+                  {/* Step 2 — flights card */}
+                  <div className="border border-gold/30 bg-gold/5 p-5">
+                    <p className="font-body text-[10px] tracking-[2px] uppercase text-gold mb-2">
+                      Step {flightsStepNum} — Book your flights
+                    </p>
+                    <p className="font-body font-light text-sm text-ink-soft mb-4">
+                      Fly into Cancún ({destinationAirport}) — most of the group arrives{" "}
+                      {formatDeadline(travelDateStart) || travelDateStart} and heads home{" "}
+                      {formatDeadline(travelDateEnd) || travelDateEnd}.
+                    </p>
+                    <button
+                      onClick={() => {
+                        if (!userAirport) {
+                          findNearestAirport();
+                          // Open with no origin for now, geolocation will update
+                          window.open(getFlightsUrl(), "_blank");
+                        } else {
+                          window.open(getFlightsUrl(), "_blank");
+                        }
+                      }}
+                      className="w-full py-3.5 text-center border-2 border-gold text-gold font-body font-normal text-[13px] tracking-[3px] uppercase hover:bg-gold hover:text-white transition-colors"
+                    >
+                      Search Flights
+                    </button>
+                  </div>
+
+                  {/* Step 3 — checklist heading */}
+                  <div className="pt-2">
+                    <p className="font-body text-[10px] tracking-[2px] uppercase text-gold text-center mb-1">
+                      Step {checklistStepNum} — Your checklist
+                    </p>
+                    <p className="font-body font-light text-[11px] text-ink-faint text-center mb-3">
+                      Check things off as you book, then submit at the bottom — you can update it anytime.
+                    </p>
+                  </div>
 
                   {/* Per-person checklist */}
                   {memberChecklist.map((m, i) => (
