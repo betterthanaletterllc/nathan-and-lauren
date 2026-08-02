@@ -50,6 +50,8 @@ interface Props {
   roomBlockCode: string;
   roomBlockDeadline: string;
   rsvpDeadline: string;
+  mealChangeDeadline: string;
+  kidsInterestInitial: boolean;
   destinationAirport: string;
   travelDateStart: string;
   travelDateEnd: string;
@@ -58,7 +60,7 @@ interface Props {
   eventSchedule: { name: string; date: string; time: string; location: string; notes: string }[];
 }
 
-export default function GuestPageClient({ guest, members: initialMembers, note, phase, videoUrl, roomBlockLink, roomBlockCode, roomBlockDeadline, rsvpDeadline, destinationAirport, travelDateStart, travelDateEnd, foodOptions, resortMapUrl, eventSchedule }: Props) {
+export default function GuestPageClient({ guest, members: initialMembers, note, phase, videoUrl, roomBlockLink, roomBlockCode, roomBlockDeadline, rsvpDeadline, mealChangeDeadline, kidsInterestInitial, destinationAirport, travelDateStart, travelDateEnd, foodOptions, resortMapUrl, eventSchedule }: Props) {
   const [submitted, setSubmitted] = useState(guest.addressSubmitted);
   const [submitting, setSubmitting] = useState(false);
   const [rsvpSubmitted, setRsvpSubmitted] = useState(guest.rsvpSubmitted);
@@ -84,6 +86,17 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
   const [plusOne, setPlusOne] = useState({ firstName: "", lastName: "", phone: "", email: "", foodChoice: "", foodAllergies: "" });
   const [showPlusOne, setShowPlusOne] = useState(false);
   const [rsvpSubmitting, setRsvpSubmitting] = useState(false);
+  const [rsvpAttempted, setRsvpAttempted] = useState(false);
+  const [rsvpError, setRsvpError] = useState("");
+
+  // Kids
+  const [kidsInterest, setKidsInterest] = useState(kidsInterestInitial);
+  const [kidForm, setKidForm] = useState({ first: "", last: "" });
+  const [kidError, setKidError] = useState("");
+
+  // Meal changes (post-RSVP)
+  const [editingMealId, setEditingMealId] = useState<number | null>(null);
+  const [mealSavingId, setMealSavingId] = useState<number | null>(null);
 
   // Checklist state - per person
   const [memberChecklist, setMemberChecklist] = useState(
@@ -138,6 +151,33 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
   }
   const rsvpDeadlineDate = parseLocalDate(rsvpDeadline);
   const rsvpDaysLeft = rsvpDeadlineDate ? Math.max(0, Math.ceil((rsvpDeadlineDate.getTime() - now) / 86400000)) : null;
+
+  // Meal-change window
+  const mealDeadlineDate = parseLocalDate(mealChangeDeadline);
+  const mealChangeOpen = !mealDeadlineDate || now <= mealDeadlineDate.getTime();
+
+  // Food option value <-> label
+  function mealValue(label: string) {
+    return label.toLowerCase().replace(/\s+/g, "_");
+  }
+  function mealLabel(value: string | null) {
+    if (!value) return "—";
+    return foodOptions.find((o) => mealValue(o) === value) || value;
+  }
+
+  // RSVP validation — every member answered, every attendee has a dinner
+  function getRsvpMissing(): string[] {
+    const missing: string[] = [];
+    for (const m of rsvpMembers) {
+      if (!m.rsvpStatus) missing.push(`${m.firstName} hasn’t answered yet`);
+      else if (m.rsvpStatus === "coming" && !m.foodChoice) missing.push(`${m.firstName} needs a dinner selection`);
+    }
+    if (showPlusOne && plusOne.firstName && !plusOne.foodChoice) {
+      missing.push(`${plusOne.firstName} needs a dinner selection`);
+    }
+    return missing;
+  }
+  const rsvpMissing = getRsvpMissing();
 
   // Status strip (rsvp phase onward)
   const showStrip = phase === "rsvp" || phase === "checklist" || phase === "final";
@@ -224,11 +264,55 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
     }
   }
 
+  function addKid() {
+    const first = kidForm.first.trim();
+    const last = kidForm.last.trim();
+    if (!first) {
+      setKidError("A first name, please");
+      return;
+    }
+    const tempId = Math.min(0, ...rsvpMembers.map((m) => m.id)) - 1;
+    setRsvpMembers([
+      ...rsvpMembers,
+      {
+        id: tempId,
+        firstName: first,
+        lastName: last,
+        rsvpStatus: "coming",
+        foodChoice: "",
+        foodAllergies: "",
+        isChild: true,
+        isPlusOne: false,
+        passportConfirmed: false,
+        flightsBooked: false,
+        departureDate: null,
+        departureFlight: null,
+        returnDate: null,
+        returnFlight: null,
+        hotelBooked: false,
+      },
+    ]);
+    setKidForm({ first: "", last: "" });
+    setKidError("");
+  }
+
+  function removeKid(tempId: number) {
+    setRsvpMembers(rsvpMembers.filter((m) => m.id !== tempId));
+  }
+
   async function handleRsvpSubmit() {
+    setRsvpAttempted(true);
+    setRsvpError("");
+    if (getRsvpMissing().length > 0) return;
+
     setRsvpSubmitting(true);
     try {
       const members = rsvpMembers.map((m) => ({
-        id: m.id,
+        // Negative ids are children added in this session — insert, don't update
+        id: m.id > 0 ? m.id : undefined,
+        firstName: m.firstName,
+        lastName: m.lastName,
+        isChild: m.isChild,
         rsvpStatus: m.rsvpStatus || "not_coming",
         foodChoice: m.rsvpStatus === "coming" ? m.foodChoice : null,
         foodAllergies: m.rsvpStatus === "coming" ? m.foodAllergies : null,
@@ -252,11 +336,63 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
       const res = await fetch("/api/rsvp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: guest.slug, members }),
+        body: JSON.stringify({ slug: guest.slug, members, kidsInterest }),
       });
-      if (res.ok) setRsvpSubmitted(true);
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        // Refresh local state from the server's member list (real ids for new
+        // kids/plus-ones) so the travel checklist works without a reload
+        if (Array.isArray(data.members)) {
+          setRsvpMembers(
+            data.members.map((m: any) => ({
+              ...m,
+              rsvpStatus: m.rsvpStatus || "",
+              foodChoice: m.foodChoice || "",
+              foodAllergies: m.foodAllergies || "",
+            }))
+          );
+          setMemberChecklist(
+            data.members
+              .filter((m: any) => m.rsvpStatus === "coming")
+              .map((m: any) => ({
+                id: m.id,
+                firstName: m.firstName,
+                lastName: m.lastName,
+                passportConfirmed: m.passportConfirmed || false,
+                flightsBooked: m.flightsBooked || false,
+                departureDate: m.departureDate || "",
+                departureFlight: m.departureFlight || "",
+                returnDate: m.returnDate || "",
+                returnFlight: m.returnFlight || "",
+                hotelBooked: m.hotelBooked || false,
+              }))
+          );
+        }
+        setRsvpSubmitted(true);
+      } else {
+        setRsvpError(data.error || "Something went wrong — please try again");
+      }
+    } catch {
+      setRsvpError("Something went wrong — please try again");
     } finally {
       setRsvpSubmitting(false);
+    }
+  }
+
+  async function changeMeal(memberId: number, newChoice: string) {
+    setMealSavingId(memberId);
+    try {
+      const res = await fetch("/api/rsvp", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug: guest.slug, memberId, foodChoice: newChoice }),
+      });
+      if (res.ok) {
+        setRsvpMembers(rsvpMembers.map((m) => (m.id === memberId ? { ...m, foodChoice: newChoice } : m)));
+        setEditingMealId(null);
+      }
+    } finally {
+      setMealSavingId(null);
     }
   }
 
@@ -361,7 +497,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
             ) : (
               <>
                 <span className="text-[#6E8060] font-medium">✓ RSVP&apos;d</span>
-                {anyoneComing && (phase === "checklist" || phase === "final") && checklistTotal > 0 && (
+                {anyoneComing && checklistTotal > 0 && (
                   <span className="inline-flex items-center gap-1.5">
                     <span className="w-1 h-1 rounded-full bg-gold" />
                     <span>
@@ -614,15 +750,78 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
               )}
 
               {rsvpSubmitted ? (
-                <div className="py-4">
-                  <p className="font-body font-light text-sm text-ink-soft mb-1">
-                    Thank you for your RSVP!
-                  </p>
-                  <p className="font-body font-light text-xs text-ink-faint">
-                    {rsvpMembers.filter((m) => m.rsvpStatus === "coming").length > 0
-                      ? `We can't wait to celebrate with you in Cancún!`
-                      : "We'll miss you! Thank you for letting us know."}
-                  </p>
+                <div className="text-left">
+                  <div className="border border-gold/30 bg-gold/5 p-5">
+                    <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint text-center mb-2">
+                      Your RSVP
+                    </p>
+                    <p className="font-body font-light text-xs text-ink-soft text-center mb-3">
+                      {anyoneComing
+                        ? "We can’t wait to celebrate with you in Cancún!"
+                        : "We’ll miss you! Thank you for letting us know."}
+                    </p>
+                    {rsvpMembers.filter((m) => m.firstName).map((m) => (
+                      <div key={m.id} className="flex items-center gap-3 flex-wrap py-2.5 border-b border-gold-pale/50 last:border-0">
+                        <span className="font-body text-sm text-ink flex-1">
+                          {m.firstName} {m.lastName}
+                          {m.isChild && <span className="text-xs text-ink-faint ml-1.5">(child)</span>}
+                        </span>
+                        {m.rsvpStatus === "coming" ? (
+                          editingMealId === m.id ? (
+                            <div className="basis-full flex gap-2 pt-1">
+                              {foodOptions.map((opt) => (
+                                <button
+                                  key={opt}
+                                  onClick={() => changeMeal(m.id, mealValue(opt))}
+                                  disabled={mealSavingId === m.id}
+                                  className={`flex-1 py-2 text-xs font-body tracking-[1px] uppercase transition-colors disabled:opacity-50 ${
+                                    m.foodChoice === mealValue(opt) ? "bg-gold text-white" : "border border-gold-pale text-ink-soft hover:border-gold"
+                                  }`}
+                                >
+                                  {mealSavingId === m.id ? "Saving..." : opt}
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <>
+                              <span className="font-display italic text-base text-ink-soft">{mealLabel(m.foodChoice)}</span>
+                              {mealChangeOpen && (
+                                <button
+                                  onClick={() => setEditingMealId(m.id)}
+                                  className="font-body text-[10px] tracking-[1.5px] uppercase text-gold underline underline-offset-2"
+                                >
+                                  Change
+                                </button>
+                              )}
+                            </>
+                          )
+                        ) : (
+                          <span className="font-display italic text-base text-ink-faint">Not attending</span>
+                        )}
+                      </div>
+                    ))}
+                    {kidsInterest && !rsvpMembers.some((m) => m.isChild && m.rsvpStatus === "coming") && (
+                      <div className="flex items-center gap-3 py-2.5 border-b border-gold-pale/50 last:border-0">
+                        <span className="font-body text-sm text-ink flex-1">Children</span>
+                        <span className="font-display italic text-base text-ink-soft">Interested — names to come</span>
+                      </div>
+                    )}
+                    <p className="font-body font-light text-[11px] text-ink-faint text-center mt-3 leading-relaxed">
+                      {anyoneComing ? (
+                        mealChangeOpen ? (
+                          <>
+                            Meal changes open until{" "}
+                            <b className="font-medium text-ink-soft">{mealDeadlineDate ? formatDeadline(mealChangeDeadline) : "further notice"}</b>.
+                            Need to change who&apos;s coming? Text us anytime.
+                          </>
+                        ) : (
+                          <>Dinner selections are locked in for the resort. Need anything? Text us anytime.</>
+                        )
+                      ) : (
+                        <>Change of plans? Text us anytime.</>
+                      )}
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4 text-left">
@@ -632,10 +831,20 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
 
                   {rsvpMembers.map((m, i) => (
                     <div key={m.id} className="border border-gold-pale/40 p-4 space-y-3">
-                      <p className="font-body font-medium text-sm text-ink">
-                        {m.firstName} {m.lastName}
-                        {m.isChild && <span className="text-xs text-ink-faint ml-2">(child)</span>}
-                      </p>
+                      <div className="flex items-baseline justify-between">
+                        <p className="font-body font-medium text-sm text-ink">
+                          {m.firstName} {m.lastName}
+                          {m.isChild && <span className="text-xs text-ink-faint ml-2">(child)</span>}
+                        </p>
+                        {m.id < 0 && (
+                          <button
+                            onClick={() => removeKid(m.id)}
+                            className="font-body text-[10px] tracking-[1px] uppercase text-ink-faint hover:text-red-400"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
 
                       <div className="flex gap-3">
                         {["coming", "not_coming"].map((status) => (
@@ -728,13 +937,64 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                     </div>
                   )}
 
+                  {/* Kids interest */}
+                  <div className="border border-dashed border-gold-pale p-4 space-y-3">
+                    <label className="flex items-center gap-2 font-body text-sm text-ink cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={kidsInterest}
+                        onChange={(e) => setKidsInterest(e.target.checked)}
+                      />
+                      I&apos;m interested in bringing my children
+                    </label>
+                    {kidsInterest && (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            value={kidForm.first}
+                            onChange={(e) => { setKidForm({ ...kidForm, first: e.target.value }); setKidError(""); }}
+                            placeholder="First name"
+                            className={inputClass}
+                          />
+                          <input
+                            type="text"
+                            value={kidForm.last}
+                            onChange={(e) => setKidForm({ ...kidForm, last: e.target.value })}
+                            placeholder="Last name"
+                            className={inputClass}
+                          />
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={addKid}
+                            className="px-5 py-2 bg-gold text-white font-body text-[11px] tracking-[2px] uppercase hover:bg-gold-light transition-colors"
+                          >
+                            Add
+                          </button>
+                          <span className={`font-body font-light text-[11px] ${kidError ? "text-red-400" : "text-ink-faint"}`}>
+                            {kidError || "Add each child when you know their names — no rush"}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   <button
                     onClick={handleRsvpSubmit}
-                    disabled={rsvpSubmitting || rsvpMembers.some((m) => !m.rsvpStatus)}
+                    disabled={rsvpSubmitting}
                     className="w-full py-3.5 bg-gold text-white font-body font-normal text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors disabled:opacity-50"
                   >
                     {rsvpSubmitting ? "Submitting..." : "Submit RSVP"}
                   </button>
+                  {(rsvpError || rsvpMissing.length > 0) && (
+                    <p className={`font-body font-light text-xs text-center ${rsvpAttempted || rsvpError ? "text-red-400" : "text-ink-faint"}`}>
+                      {rsvpError ||
+                        (rsvpAttempted
+                          ? rsvpMissing[0]
+                          : `${rsvpMissing.length} ${rsvpMissing.length === 1 ? "answer" : "answers"} to go`)}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -778,8 +1038,9 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
             </div>
           )}
 
-          {/* Travel Checklist */}
-          {(phase === "checklist" || phase === "final") && rsvpSubmitted && rsvpMembers.some((m) => m.rsvpStatus === "coming") && (
+          {/* Travel Checklist — available the moment a household RSVPs yes,
+              in any phase from rsvp onward (the handoff) */}
+          {(phase === "rsvp" || phase === "checklist" || phase === "final") && rsvpSubmitted && anyoneComing && (
             <div className="mt-8 animate-fadeUp animation-delay-700">
               <div className="w-10 h-px bg-gold mx-auto mb-6" />
 
