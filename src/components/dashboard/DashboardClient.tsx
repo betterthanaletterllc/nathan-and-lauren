@@ -89,7 +89,7 @@ function AutoGeocode({ count, onDone }: { count: number; onDone: () => void }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
-    <div className="bg-[#FFFDF9] border border-gold-pale/40 p-3 text-center">
+    <div className="bg-[#FAF4EF] border border-gold-pale/40 p-3 text-center">
       <p className="font-body text-xs text-ink-faint">Geocoding {count} addresses...</p>
     </div>
   );
@@ -135,7 +135,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
 
 const icon = L.divIcon({
   className:'',
-  html:'<div style="width:18px;height:18px;background:#C4956A;border:2px solid #fff;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,.3)"></div>',
+  html:'<div style="width:18px;height:18px;background:#B08A4A;border:2px solid #fff;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,.3)"></div>',
   iconSize:[18,18],iconAnchor:[9,9]
 });
 
@@ -190,7 +190,7 @@ if(cities.length>0) geocodeRemaining();
   if (guests.length === 0) return null;
 
   return (
-    <div className="bg-[#FFFDF9] border border-gold-pale/40 overflow-hidden" style={{ height: 420 }}>
+    <div className="bg-[#FAF4EF] border border-gold-pale/40 overflow-hidden" style={{ height: 420 }}>
       {iframeSrc ? (
         <iframe src={iframeSrc} style={{ width: "100%", height: 420, border: "none" }} title="Guest Map" />
       ) : (
@@ -620,7 +620,7 @@ export default function DashboardClient() {
     }`;
 
   const cardClass =
-    "bg-[#FFFDF9] border border-gold-pale/40 p-5 text-center";
+    "bg-[#FAF4EF] border border-gold-pale/40 p-5 text-center";
 
   const [drilldown, setDrilldown] = useState<string | null>(null);
 
@@ -637,7 +637,7 @@ export default function DashboardClient() {
   return (
     <div className="min-h-dvh bg-sand">
       {/* Header */}
-      <header className="bg-[#FFFDF9] border-b border-gold-pale/40 px-6 py-4 flex items-center justify-between">
+      <header className="bg-[#FAF4EF] border-b border-gold-pale/40 px-6 py-4 flex items-center justify-between">
         <div>
           <h1 className="font-display font-light text-2xl text-ink">
             Nathan & Lauren
@@ -655,7 +655,7 @@ export default function DashboardClient() {
       </header>
 
       {/* Tabs */}
-      <nav className="bg-[#FFFDF9] border-b border-gold-pale/40 px-6 flex gap-2 overflow-x-auto">
+      <nav className="bg-[#FAF4EF] border-b border-gold-pale/40 px-6 flex gap-2 overflow-x-auto">
         {(
           [
             ["overview", "Overview"],
@@ -728,7 +728,7 @@ export default function DashboardClient() {
 
             {/* Drilldown panel */}
             {drilldown && (
-              <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+              <div className="bg-[#FAF4EF] border border-gold-pale/40 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <p className="font-body font-light text-[10px] tracking-[3px] uppercase text-ink-faint">
                     {drilldown}
@@ -809,7 +809,7 @@ export default function DashboardClient() {
             )}
 
             {/* Quick progress */}
-            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+            <div className="bg-[#FAF4EF] border border-gold-pale/40 p-6">
               <p className="font-body font-light text-[10px] tracking-[3px] uppercase text-ink-faint mb-3">
                 Address collection progress
               </p>
@@ -831,7 +831,7 @@ export default function DashboardClient() {
             </div>
 
             {/* Recent activity preview */}
-            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+            <div className="bg-[#FAF4EF] border border-gold-pale/40 p-6">
               <p className="font-body font-light text-[10px] tracking-[3px] uppercase text-ink-faint mb-4">
                 Recent activity
               </p>
@@ -869,14 +869,14 @@ export default function DashboardClient() {
                   placeholder="Search guests, tags, phone..."
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-[#FFFDF9] border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
+                  className="w-full px-4 py-2.5 bg-[#FAF4EF] border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold"
                 />
               </div>
               {allTags.length > 0 && (
                 <select
                   value={tagFilter}
                   onChange={(e) => setTagFilter(e.target.value)}
-                  className="px-3 py-2.5 bg-[#FFFDF9] border border-gold-pale text-sm font-body font-light text-ink focus:outline-none focus:border-gold"
+                  className="px-3 py-2.5 bg-[#FAF4EF] border border-gold-pale text-sm font-body font-light text-ink focus:outline-none focus:border-gold"
                 >
                   <option value="">All tags</option>
                   {allTags.map((t) => (
@@ -886,13 +886,13 @@ export default function DashboardClient() {
               )}
               <button
                 onClick={() => (window.location.href = "/api/guests/export")}
-                className="px-4 py-2.5 border border-gold-pale text-gold font-body text-[11px] tracking-[2px] uppercase hover:bg-[#FFFDF9] transition-colors"
+                className="px-4 py-2.5 border border-gold-pale text-gold font-body text-[11px] tracking-[2px] uppercase hover:bg-[#FAF4EF] transition-colors"
               >
                 Export CSV
               </button>
               <button
                 onClick={() => fileRef.current?.click()}
-                className="px-4 py-2.5 border border-gold-pale text-gold font-body text-[11px] tracking-[2px] uppercase hover:bg-[#FFFDF9] transition-colors"
+                className="px-4 py-2.5 border border-gold-pale text-gold font-body text-[11px] tracking-[2px] uppercase hover:bg-[#FAF4EF] transition-colors"
               >
                 Import CSV
               </button>
@@ -909,7 +909,7 @@ export default function DashboardClient() {
             </div>
 
             {/* Add guest form */}
-            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-4 space-y-3">
+            <div className="bg-[#FAF4EF] border border-gold-pale/40 p-4 space-y-3">
               <div className="flex flex-wrap gap-3 items-end">
                 <div className="flex-1 min-w-[180px]">
                   <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-1">
@@ -994,7 +994,7 @@ export default function DashboardClient() {
             </div>
 
             {/* Guest table */}
-            <div className="bg-[#FFFDF9] border border-gold-pale/40 overflow-x-auto">
+            <div className="bg-[#FAF4EF] border border-gold-pale/40 overflow-x-auto">
               <table className="w-full text-sm font-body">
                 <thead>
                   <tr className="border-b border-gold-pale/40">
@@ -1213,7 +1213,7 @@ export default function DashboardClient() {
         {/* NUDGE TAB */}
         {tab === "nudge" && (
           <div className="space-y-6">
-            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+            <div className="bg-[#FAF4EF] border border-gold-pale/40 p-6">
               <div className="flex items-center justify-between mb-4">
                 <p className="font-body font-light text-[10px] tracking-[3px] uppercase text-ink-faint">
                   Guests who haven&apos;t submitted their address
@@ -1283,7 +1283,7 @@ export default function DashboardClient() {
 
         {/* ACTIVITY TAB */}
         {tab === "activity" && (
-          <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+          <div className="bg-[#FAF4EF] border border-gold-pale/40 p-6">
             <p className="font-body font-light text-[10px] tracking-[3px] uppercase text-ink-faint mb-4">
               Activity feed
             </p>
@@ -1331,7 +1331,7 @@ export default function DashboardClient() {
               const withAddress = guests.filter((g) => g.addressLine1 && g.city && g.state);
               if (withAddress.length === 0) {
                 return (
-                  <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+                  <div className="bg-[#FAF4EF] border border-gold-pale/40 p-6">
                     <p className="text-center py-8 text-ink-faint text-sm">
                       No addresses submitted yet. Locations will appear here as guests submit their addresses.
                     </p>
@@ -1370,22 +1370,22 @@ export default function DashboardClient() {
                 <>
                   {/* Summary */}
                   <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-[#FFFDF9] border border-gold-pale/40 p-5 text-center">
+                    <div className="bg-[#FAF4EF] border border-gold-pale/40 p-5 text-center">
                       <p className="font-display text-2xl text-ink">{withAddress.length}</p>
                       <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">Addresses in</p>
                     </div>
-                    <div className="bg-[#FFFDF9] border border-gold-pale/40 p-5 text-center">
+                    <div className="bg-[#FAF4EF] border border-gold-pale/40 p-5 text-center">
                       <p className="font-display text-2xl text-ink">{Object.keys(byState).length}</p>
                       <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">States</p>
                     </div>
-                    <div className="bg-[#FFFDF9] border border-gold-pale/40 p-5 text-center">
+                    <div className="bg-[#FAF4EF] border border-gold-pale/40 p-5 text-center">
                       <p className="font-display text-2xl text-ink">{sortedStates.reduce((s, [, cities]) => s + cities.length, 0)}</p>
                       <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint">Cities</p>
                     </div>
                   </div>
 
                   {/* Address list by state */}
-                  <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+                  <div className="bg-[#FAF4EF] border border-gold-pale/40 p-6">
                     <p className="font-body font-light text-[10px] tracking-[3px] uppercase text-ink-faint mb-4">
                       All addresses
                     </p>
@@ -1453,7 +1453,7 @@ export default function DashboardClient() {
         {tab === "settings" && (
           <div className="space-y-6 max-w-xl">
             {/* Guest page phase */}
-            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+            <div className="bg-[#FAF4EF] border border-gold-pale/40 p-6">
               <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block mb-2">
                 Guest page phase
               </label>
@@ -1484,7 +1484,7 @@ export default function DashboardClient() {
             </div>
 
             {/* Global video URL */}
-            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+            <div className="bg-[#FAF4EF] border border-gold-pale/40 p-6">
               <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block mb-2">
                 Global video URL (RSVP phase)
               </label>
@@ -1502,7 +1502,7 @@ export default function DashboardClient() {
             </div>
 
             {/* Deadlines */}
-            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6 space-y-4">
+            <div className="bg-[#FAF4EF] border border-gold-pale/40 p-6 space-y-4">
               <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block">
                 Deadlines
               </label>
@@ -1533,7 +1533,7 @@ export default function DashboardClient() {
             </div>
 
             {/* Room block */}
-            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6 space-y-4">
+            <div className="bg-[#FAF4EF] border border-gold-pale/40 p-6 space-y-4">
               <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block">
                 Room block
               </label>
@@ -1579,7 +1579,7 @@ export default function DashboardClient() {
             </div>
 
             {/* Travel settings */}
-            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6 space-y-4">
+            <div className="bg-[#FAF4EF] border border-gold-pale/40 p-6 space-y-4">
               <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block">
                 Travel settings
               </label>
@@ -1616,7 +1616,7 @@ export default function DashboardClient() {
             </div>
 
             {/* Food options */}
-            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+            <div className="bg-[#FAF4EF] border border-gold-pale/40 p-6">
               <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block mb-2">
                 Dinner options (RSVP phase)
               </label>
@@ -1633,7 +1633,7 @@ export default function DashboardClient() {
             </div>
 
             {/* Resort map URL */}
-            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+            <div className="bg-[#FAF4EF] border border-gold-pale/40 p-6">
               <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block mb-2">
                 Resort map URL (arrived phase)
               </label>
@@ -1647,7 +1647,7 @@ export default function DashboardClient() {
             </div>
 
             {/* Event schedule */}
-            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+            <div className="bg-[#FAF4EF] border border-gold-pale/40 p-6">
               <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block mb-2">
                 Event schedule (arrived phase)
               </label>
@@ -1691,7 +1691,7 @@ export default function DashboardClient() {
             </div>
 
             {/* Global note */}
-            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+            <div className="bg-[#FAF4EF] border border-gold-pale/40 p-6">
               <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block mb-2">
                 Global note from the couple
               </label>
@@ -1709,7 +1709,7 @@ export default function DashboardClient() {
             </div>
 
             {/* Reminder threshold */}
-            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+            <div className="bg-[#FAF4EF] border border-gold-pale/40 p-6">
               <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block mb-2">
                 Show table numbers to guests
               </label>
@@ -1734,7 +1734,7 @@ export default function DashboardClient() {
             </div>
 
             {/* Reminder threshold */}
-            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+            <div className="bg-[#FAF4EF] border border-gold-pale/40 p-6">
               <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block mb-2">
                 Nudge reminder threshold (days)
               </label>
@@ -1754,7 +1754,7 @@ export default function DashboardClient() {
             </div>
 
             {/* Per-guest notes quick editor */}
-            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+            <div className="bg-[#FAF4EF] border border-gold-pale/40 p-6">
               <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block mb-3">
                 Per-guest notes
               </label>
@@ -1780,7 +1780,7 @@ export default function DashboardClient() {
             </div>
 
             {/* CSV template */}
-            <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+            <div className="bg-[#FAF4EF] border border-gold-pale/40 p-6">
               <label className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint block mb-2">
                 CSV import format
               </label>
@@ -1797,7 +1797,7 @@ export default function DashboardClient() {
 
             {/* Save bar */}
             {settingsDirty && (
-              <div className="sticky bottom-0 bg-[#FFFDF9] border-t border-gold-pale/40 p-4 flex items-center justify-between -mx-0">
+              <div className="sticky bottom-0 bg-[#FAF4EF] border-t border-gold-pale/40 p-4 flex items-center justify-between -mx-0">
                 <p className="font-body text-xs text-ink-soft">You have unsaved changes</p>
                 <div className="flex gap-2">
                   <button
@@ -1823,9 +1823,9 @@ export default function DashboardClient() {
       {editingGuest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-ink/30" onClick={tryCloseHousehold} />
-          <div className="relative bg-[#FFFDF9] border border-gold-pale/60 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="relative bg-[#FAF4EF] border border-gold-pale/60 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             {/* Header */}
-            <div className="sticky top-0 bg-[#FFFDF9] border-b border-gold-pale/40 px-6 py-4 flex items-center justify-between z-10">
+            <div className="sticky top-0 bg-[#FAF4EF] border-b border-gold-pale/40 px-6 py-4 flex items-center justify-between z-10">
               <h2 className="font-display font-light text-xl text-ink">{editingGuest.name}</h2>
               <button onClick={tryCloseHousehold} className="text-ink-faint hover:text-ink text-xl leading-none">&times;</button>
             </div>
@@ -2100,7 +2100,7 @@ export default function DashboardClient() {
       {showConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-ink/40" />
-          <div className="relative bg-[#FFFDF9] border border-gold-pale/60 p-8 max-w-sm w-full text-center">
+          <div className="relative bg-[#FAF4EF] border border-gold-pale/60 p-8 max-w-sm w-full text-center">
             <p className="font-display text-lg text-ink mb-2">
               {pendingClose ? "Unsaved changes" : "Save changes?"}
             </p>
@@ -2139,7 +2139,7 @@ export default function DashboardClient() {
       {showSlugConfirm && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-ink/40" />
-          <div className="relative bg-[#FFFDF9] border border-gold-pale/60 p-8 max-w-sm w-full text-center">
+          <div className="relative bg-[#FAF4EF] border border-gold-pale/60 p-8 max-w-sm w-full text-center">
             <p className="font-display text-lg text-ink mb-2">Change guest URL?</p>
             <p className="font-body text-sm text-ink-soft mb-2">
               This will change the link from:
@@ -2172,7 +2172,7 @@ export default function DashboardClient() {
       {showSettingsConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-ink/40" />
-          <div className="relative bg-[#FFFDF9] border border-gold-pale/60 p-8 max-w-sm w-full text-center">
+          <div className="relative bg-[#FAF4EF] border border-gold-pale/60 p-8 max-w-sm w-full text-center">
             <p className="font-display text-lg text-ink mb-2">Unsaved settings</p>
             <p className="font-body text-sm text-ink-soft mb-6">
               You have unsaved changes in Settings. Would you like to save them before leaving?

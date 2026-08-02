@@ -5,7 +5,7 @@ import { signIn } from "next-auth/react";
 export default function LoginPage() {
   return (
     <div className="min-h-dvh bg-sand flex items-center justify-center p-4">
-      <div className="bg-[#FFFDF9] border border-gold-pale/60 p-12 text-center max-w-sm w-full">
+      <div className="bg-[#FAF4EF] border border-gold-pale/60 p-12 text-center max-w-sm w-full">
         <p className="font-body font-normal text-[10px] tracking-[6px] uppercase text-gold mb-6">
           Dashboard
         </p>

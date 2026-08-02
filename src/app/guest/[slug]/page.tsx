@@ -52,11 +52,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const memberNames = await getMemberNames(guest.id);
   const displayName = memberNames.length > 0 ? formatFirstNames(memberNames) : guest.name.split(/\s*&\s*|\s+and\s+/i)[0].trim();
 
+  // Mirror the page's phase logic (incl. address auto-advance) so the tab/share
+  // title says "You're Invited" once a household is past save-the-date.
+  const config = await getSettings();
+  let metaPhase = guest.phaseOverride || config["guest_page_phase"] || "save_the_date";
+  if (metaPhase === "save_the_date" && !guest.phaseOverride && guest.addressSubmittedAt) {
+    metaPhase = "rsvp";
+  }
+  const headline = metaPhase === "save_the_date" ? "Save the Date!" : "You're Invited!";
+
   return {
-    title: `${displayName}, Save the Date! — Nathan & Lauren`,
+    title: `${displayName}, ${headline} — Nathan & Lauren`,
     description: `You're invited to celebrate Nathan & Lauren's wedding · February 26, 2027 · Riviera Cancún, Mexico`,
     openGraph: {
-      title: `${displayName}, Save the Date!`,
+      title: `${displayName}, ${headline}`,
       description: `Nathan & Lauren are getting married · February 26, 2027 · Riviera Cancún, Mexico`,
       type: "website",
     },

@@ -163,7 +163,7 @@ export default function GuestMap({ guests }: Props) {
 
     const goldIcon = L.divIcon({
       className: "",
-      html: '<div style="width:20px;height:20px;background:#C4956A;border:2px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>',
+      html: '<div style="width:20px;height:20px;background:#B08A4A;border:2px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>',
       iconSize: [20, 20],
       iconAnchor: [10, 10],
     });
@@ -186,14 +186,14 @@ export default function GuestMap({ guests }: Props) {
   if (guests.length === 0) return null;
 
   return (
-    <div className="bg-[#FFFDF9] border border-gold-pale/40 overflow-hidden relative" style={{ height: 400 }}>
+    <div className="bg-[#FAF4EF] border border-gold-pale/40 overflow-hidden relative" style={{ height: 400 }}>
       {error && (
         <div className="absolute inset-0 flex items-center justify-center z-10">
           <p className="font-body text-xs text-red-500">{error}</p>
         </div>
       )}
       {loading && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 z-10 bg-[#FFFDF9]">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 z-10 bg-[#FAF4EF]">
           <p className="font-body text-xs text-ink-faint tracking-widest uppercase">
             Loading map...
           </p>

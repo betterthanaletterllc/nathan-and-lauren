@@ -150,7 +150,7 @@ export default function SeatingChart({ guests, onSave }: Props) {
   return (
     <div className="space-y-6">
       {/* Controls */}
-      <div className="bg-[#FFFDF9] border border-gold-pale/40 p-4 flex flex-wrap gap-4 items-end">
+      <div className="bg-[#FAF4EF] border border-gold-pale/40 p-4 flex flex-wrap gap-4 items-end">
         <div>
           <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-1">Tables</label>
           <input type="number" min="1" max="30" value={numTables} onChange={(e) => setNumTables(parseInt(e.target.value) || 1)} className="w-20 px-3 py-2 border border-gold-pale text-sm font-body text-ink focus:outline-none focus:border-gold" />
@@ -172,7 +172,7 @@ export default function SeatingChart({ guests, onSave }: Props) {
 
       {/* Unseated people */}
       {unseated.length > 0 && (
-        <div className="bg-[#FFFDF9] border border-gold-pale/40 p-4">
+        <div className="bg-[#FAF4EF] border border-gold-pale/40 p-4">
           <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint mb-3">
             Unseated ({unseated.length})
           </p>
@@ -247,8 +247,8 @@ export default function SeatingChart({ guests, onSave }: Props) {
 
                       {/* Picker */}
                       {isSelected && unseated.length > 0 && (
-                        <div className="absolute z-50 top-full mt-1 left-1/2 -translate-x-1/2 bg-[#FFFDF9] border border-gold-pale shadow-lg w-56" style={{ maxHeight: 240, overflowY: "auto" }}>
-                          <div className="sticky top-0 bg-[#FFFDF9] p-2 border-b border-sand-dark">
+                        <div className="absolute z-50 top-full mt-1 left-1/2 -translate-x-1/2 bg-[#FAF4EF] border border-gold-pale shadow-lg w-56" style={{ maxHeight: 240, overflowY: "auto" }}>
+                          <div className="sticky top-0 bg-[#FAF4EF] p-2 border-b border-sand-dark">
                             <input
                               type="text"
                               value={searchFilter}

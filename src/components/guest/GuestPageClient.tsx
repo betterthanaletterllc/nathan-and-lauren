@@ -503,20 +503,34 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
           </button>
         </div>
       )}
-      <div className="bg-[#FFFDF9] max-w-[480px] w-full relative border border-gold-pale/60">
-        {/* Corner accents */}
-        <div className="absolute top-3 left-3 w-5 h-5 border-t border-l border-gold" />
-        <div className="absolute top-3 right-3 w-5 h-5 border-t border-r border-gold" />
-        <div className="absolute bottom-3 left-3 w-5 h-5 border-b border-l border-gold" />
-        <div className="absolute bottom-3 right-3 w-5 h-5 border-b border-r border-gold" />
+      <div className="bg-[#FAF4EF] max-w-[480px] w-full relative shadow-[0_2px_20px_rgba(36,76,58,0.10)]">
+        {/* Invitation artwork — botanical corners + ornaments extracted from the printed suite */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/invite/corner-tl.webp" alt="" aria-hidden className="pointer-events-none select-none absolute top-0 left-0 w-[167px]" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/invite/corner-tr.webp" alt="" aria-hidden className="pointer-events-none select-none absolute top-0 right-0 w-[167px]" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/invite/corner-bl.webp" alt="" aria-hidden className="pointer-events-none select-none absolute bottom-0 left-0 w-[167px]" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/invite/corner-br.webp" alt="" aria-hidden className="pointer-events-none select-none absolute bottom-0 right-0 w-[167px]" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/invite/ornament-top.webp" alt="" aria-hidden className="pointer-events-none select-none absolute top-0 left-1/2 -translate-x-1/2 w-[87px]" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/invite/ornament-bottom.webp" alt="" aria-hidden className="pointer-events-none select-none absolute bottom-0 left-1/2 -translate-x-1/2 w-[87px]" />
 
-        {/* Gold top line */}
-        <div className="absolute top-3 left-8 right-8 h-px bg-gradient-to-r from-transparent via-gold to-transparent" />
-        <div className="absolute bottom-3 left-8 right-8 h-px bg-gradient-to-r from-transparent via-gold to-transparent" />
+        {/* Frame connectors — fade out before reaching the corner art so nothing has to align to the pixel */}
+        <div className="pointer-events-none absolute top-[12px] left-[150px] right-[150px] h-px bg-gradient-to-r from-transparent via-gold/70 to-transparent" />
+        <div className="pointer-events-none absolute top-[17px] left-[150px] right-[150px] h-px bg-gradient-to-r from-transparent via-gold/40 to-transparent" />
+        <div className="pointer-events-none absolute bottom-[12px] left-[150px] right-[150px] h-px bg-gradient-to-r from-transparent via-gold/70 to-transparent" />
+        <div className="pointer-events-none absolute bottom-[17px] left-[150px] right-[150px] h-px bg-gradient-to-r from-transparent via-gold/40 to-transparent" />
+        <div className="pointer-events-none absolute left-[10px] top-[190px] bottom-[190px] w-px bg-gradient-to-b from-transparent via-gold/70 to-transparent" />
+        <div className="pointer-events-none absolute left-[15px] top-[190px] bottom-[190px] w-px bg-gradient-to-b from-transparent via-gold/40 to-transparent" />
+        <div className="pointer-events-none absolute right-[10px] top-[190px] bottom-[190px] w-px bg-gradient-to-b from-transparent via-gold/70 to-transparent" />
+        <div className="pointer-events-none absolute right-[15px] top-[190px] bottom-[190px] w-px bg-gradient-to-b from-transparent via-gold/40 to-transparent" />
 
         {/* Status strip */}
         {showStrip && (rsvpSubmitted || rsvpDeadlineDate) && (
-          <div className="sticky top-2 z-20 mx-4 mt-4 px-4 py-3 bg-[#FBF3EA] border border-gold/30 shadow-sm flex items-center justify-center gap-x-3 gap-y-1 flex-wrap text-[12px] tracking-[1.5px] uppercase text-ink-soft">
+          <div className="sticky top-2 z-20 mx-4 mt-4 px-4 py-3 bg-[#F4EDDC] border border-gold/30 shadow-sm flex items-center justify-center gap-x-3 gap-y-1 flex-wrap text-[12px] tracking-[1.5px] uppercase text-ink-soft">
             {!rsvpSubmitted ? (
               <>
                 <span className="inline-flex items-center gap-1.5">
@@ -549,15 +563,17 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
         )}
 
         <div className="px-8 py-12 sm:px-10 sm:py-14 text-center">
-          {/* Save the Date */}
+          {/* Top label — save-the-date framing until the address is in, then invitation framing */}
           <p className="font-body font-normal text-[10px] tracking-[6px] uppercase text-gold mb-8 animate-fadeUp">
-            Save the Date
+            {phase === "save_the_date" ? "Save the Date" : "Together with their families"}
           </p>
 
-          {/* Personalized greeting */}
-          <p className="font-body font-light text-xs tracking-[3px] uppercase text-ink-soft mb-6 animate-fadeUp animation-delay-100">
-            {firstName}, you&apos;re invited to celebrate
-          </p>
+          {/* Personalized greeting (save-the-date only — the invitation wording below carries the names later) */}
+          {phase === "save_the_date" && (
+            <p className="font-body font-light text-xs tracking-[3px] uppercase text-ink-soft mb-6 animate-fadeUp animation-delay-100">
+              {firstName}, you&apos;re invited to celebrate
+            </p>
+          )}
 
           {/* Names */}
           <div className="mb-6 animate-fadeUp animation-delay-200">
@@ -576,18 +592,33 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
             </h1>
           </div>
 
+          {/* Invitation line — formal wording once the household is past save-the-date */}
+          {(phase === "rsvp" || phase === "checklist") && (
+            <p className="font-display italic text-[18px] text-ink-soft mb-6 animate-fadeUp animation-delay-200">
+              invite {firstName} to celebrate their wedding
+            </p>
+          )}
+
           {/* Date */}
-          <div className="flex items-center justify-center gap-6 mb-6 animate-fadeUp animation-delay-300">
-            <span className="font-body font-light text-[11px] tracking-[3px] uppercase text-ink-soft">
-              February
-            </span>
-            <div className="w-[76px] h-[76px] rounded-full border border-gold flex items-center justify-center">
-              <span className="font-display text-[34px] text-ink">26</span>
+          {phase === "save_the_date" ? (
+            <div className="flex items-center justify-center gap-6 mb-6 animate-fadeUp animation-delay-300">
+              <span className="font-body font-light text-[11px] tracking-[3px] uppercase text-ink-soft">
+                February
+              </span>
+              <div className="w-[76px] h-[76px] rounded-full border border-gold flex items-center justify-center">
+                <span className="font-display text-[34px] text-ink">26</span>
+              </div>
+              <span className="font-body font-light text-[11px] tracking-[3px] uppercase text-ink-soft">
+                2027
+              </span>
             </div>
-            <span className="font-body font-light text-[11px] tracking-[3px] uppercase text-ink-soft">
-              2027
-            </span>
-          </div>
+          ) : (
+            (phase === "rsvp" || phase === "checklist") && (
+              <p className="font-body font-medium text-[13px] tracking-[3px] uppercase text-ink mb-6 animate-fadeUp animation-delay-300">
+                February 26, 2027&ensp;·&ensp;5:00 PM
+              </p>
+            )
+          )}
 
           {/* Animated waves */}
           <svg
@@ -597,7 +628,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
             <path
               d="M10 12 Q50 2, 100 12 T190 12"
               fill="none"
-              stroke="#C4956A"
+              stroke="#B08A4A"
               strokeWidth="0.5"
               opacity="0.6"
             >
@@ -611,7 +642,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
             <path
               d="M10 14 Q50 4, 100 14 T190 14"
               fill="none"
-              stroke="#C4956A"
+              stroke="#B08A4A"
               strokeWidth="0.3"
               opacity="0.35"
             >
@@ -639,6 +670,11 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                 Riviera Cancún, Mexico
               </p>
             </a>
+            {(phase === "rsvp" || phase === "checklist") && (
+              <p className="font-display italic text-[15px] text-ink-soft mt-2">
+                Reception to follow
+              </p>
+            )}
           </div>
 
           {/* Note from couple */}

@@ -4,7 +4,7 @@ import { guests, householdMembers } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 export const runtime = "edge";
-export const alt = "Nathan & Lauren — Save the Date";
+export const alt = "Nathan & Lauren — February 26, 2027";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -43,7 +43,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #FAF6F1 0%, #F2EBE2 100%)",
+          background: "linear-gradient(135deg, #FAF4EF 0%, #EBE3D1 100%)",
           fontFamily: "serif",
         }}
       >
@@ -54,7 +54,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
             alignItems: "center",
             border: "1px solid #E8D5C0",
             padding: "60px 80px",
-            background: "#FFFDF9",
+            background: "#FAF4EF",
           }}
         >
           <p
@@ -62,7 +62,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
               fontSize: 18,
               letterSpacing: 6,
               textTransform: "uppercase",
-              color: "#C4956A",
+              color: "#B08A4A",
               margin: "0 0 24px",
             }}
           >
@@ -71,7 +71,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
           <p
             style={{
               fontSize: 28,
-              color: "#6B6660",
+              color: "#4F7060",
               margin: "0 0 16px",
             }}
           >
@@ -96,13 +96,13 @@ export default async function Image({ params }: { params: { slug: string } }) {
               margin: "16px 0",
             }}
           >
-            <div style={{ width: 60, height: 1, background: "#C4956A" }} />
-            <p style={{ fontSize: 24, color: "#C4956A", fontStyle: "italic" }}>
+            <div style={{ width: 60, height: 1, background: "#B08A4A" }} />
+            <p style={{ fontSize: 24, color: "#B08A4A", fontStyle: "italic" }}>
               February 26, 2027
             </p>
-            <div style={{ width: 60, height: 1, background: "#C4956A" }} />
+            <div style={{ width: 60, height: 1, background: "#B08A4A" }} />
           </div>
-          <p style={{ fontSize: 22, color: "#6B6660", fontStyle: "italic" }}>
+          <p style={{ fontSize: 22, color: "#4F7060", fontStyle: "italic" }}>
             Riviera Cancún, Mexico
           </p>
         </div>

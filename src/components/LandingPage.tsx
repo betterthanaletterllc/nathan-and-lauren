@@ -129,7 +129,7 @@ export default function LandingPage() {
           <path
             d="M10 12 Q75 2, 150 12 T290 12"
             fill="none"
-            stroke="#C4956A"
+            stroke="#B08A4A"
             strokeWidth="0.5"
             opacity="0.5"
           >
@@ -143,7 +143,7 @@ export default function LandingPage() {
           <path
             d="M10 14 Q75 4, 150 14 T290 14"
             fill="none"
-            stroke="#C4956A"
+            stroke="#B08A4A"
             strokeWidth="0.3"
             opacity="0.3"
           >

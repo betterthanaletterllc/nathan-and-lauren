@@ -85,7 +85,7 @@ export default function GuestDetailPage() {
 
   return (
     <div className="min-h-dvh bg-sand">
-      <header className="bg-[#FFFDF9] border-b border-gold-pale/40 px-6 py-4 flex items-center gap-4">
+      <header className="bg-[#FAF4EF] border-b border-gold-pale/40 px-6 py-4 flex items-center gap-4">
         <button
           onClick={() => router.push("/dashboard")}
           className="font-body text-[11px] tracking-[2px] uppercase text-gold hover:underline"
@@ -98,7 +98,7 @@ export default function GuestDetailPage() {
       </header>
 
       <main className="max-w-2xl mx-auto px-6 py-8">
-        <div className="bg-[#FFFDF9] border border-gold-pale/40 p-6">
+        <div className="bg-[#FAF4EF] border border-gold-pale/40 p-6">
           {rows.map(([label, val]) => (
             <div
               key={label}

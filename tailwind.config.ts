@@ -5,10 +5,10 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        gold: { DEFAULT: "#C4956A", light: "#D4A574", pale: "#E8D5C0" },
-        sand: { DEFAULT: "#FAF6F1", dark: "#F2EBE2" },
-        // soft/faint darkened for legibility on the sand background
-        ink: { DEFAULT: "#2C2A26", soft: "#5C574F", faint: "#837C72" },
+        // Palette sampled from the printed invitation suite (green + antique gold on ivory)
+        gold: { DEFAULT: "#B08A4A", light: "#C19A5E", pale: "#DCCFAF" },
+        sand: { DEFAULT: "#F1EBDD", dark: "#E7DFCC" },
+        ink: { DEFAULT: "#244C3A", soft: "#4F7060", faint: "#7C9384" },
       },
       fontFamily: {
         display: ["var(--font-display)", "Georgia", "serif"],
