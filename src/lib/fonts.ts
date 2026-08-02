@@ -10,6 +10,7 @@ export const cormorant = localFont({
     { path: "../fonts/cormorant-garamond-latin-600-normal.woff2", weight: "600", style: "normal" },
     { path: "../fonts/cormorant-garamond-latin-300-italic.woff2", weight: "300", style: "italic" },
     { path: "../fonts/cormorant-garamond-latin-400-italic.woff2", weight: "400", style: "italic" },
+    { path: "../fonts/cormorant-garamond-latin-500-italic.woff2", weight: "500", style: "italic" },
   ],
   variable: "--font-display",
   display: "swap",

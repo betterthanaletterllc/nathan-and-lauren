@@ -93,7 +93,7 @@ export default function LandingPage() {
           </h1>
           <div className="flex items-center justify-center gap-5 my-3">
             <span className="w-14 h-px bg-gold" />
-            <span className="font-display italic font-light text-3xl text-gold">&</span>
+            <span className="font-display italic font-medium text-[34px] text-gold">&</span>
             <span className="w-14 h-px bg-gold" />
           </div>
           <h1 className="font-display font-light text-[clamp(42px,12vw,64px)] leading-[1.1] text-ink">
