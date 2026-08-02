@@ -113,6 +113,11 @@ export async function PUT(req: NextRequest) {
 
     updates.updatedAt = new Date();
 
+    // Timestamps arrive as ISO strings from the client; drizzle wants Date objects.
+    if (typeof updates.addressSubmittedAt === "string") {
+      updates.addressSubmittedAt = new Date(updates.addressSubmittedAt);
+    }
+
     // Update members if provided
     if (members && Array.isArray(members)) {
       // Delete existing and re-insert

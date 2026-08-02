@@ -513,6 +513,11 @@ export default function DashboardClient() {
   const [editTable, setEditTable] = useState("");
   const [editPlusOne, setEditPlusOne] = useState(false);
   const [editVideo, setEditVideo] = useState("");
+  const [editAddr1, setEditAddr1] = useState("");
+  const [editAddr2, setEditAddr2] = useState("");
+  const [editCity, setEditCity] = useState("");
+  const [editState, setEditState] = useState("");
+  const [editZip, setEditZip] = useState("");
   const [editTags, setEditTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
   const [editSlug, setEditSlug] = useState("");
@@ -531,6 +536,11 @@ export default function DashboardClient() {
     setEditTable(g.tableNumber?.toString() || "");
     setEditPlusOne(g.plusOneAllowed);
     setEditVideo(g.videoUrl || "");
+    setEditAddr1(g.addressLine1 || "");
+    setEditAddr2(g.addressLine2 || "");
+    setEditCity(g.city || "");
+    setEditState(g.state || "");
+    setEditZip(g.zip || "");
     setEditTags((Array.isArray(g.tags) ? g.tags : []) as string[]);
     setNewTag("");
     setEditSlug(g.slug);
@@ -571,6 +581,23 @@ export default function DashboardClient() {
         plusOneAllowed: editPlusOne,
         videoUrl: editVideo || null,
         tags: editTags.length > 0 ? editTags : null,
+        addressLine1: editAddr1.trim() || null,
+        addressLine2: editAddr2.trim() || null,
+        city: editCity.trim() || null,
+        state: editState.trim() || null,
+        zip: editZip.trim() || null,
+        // Stale coordinates are worse than none — clearing them makes the guest
+        // map re-geocode the new address on next load.
+        ...((editAddr1.trim() || "") !== (editingGuest.addressLine1 || "") ||
+        (editCity.trim() || "") !== (editingGuest.city || "") ||
+        (editState.trim() || "") !== (editingGuest.state || "") ||
+        (editZip.trim() || "") !== (editingGuest.zip || "")
+          ? { latitude: null, longitude: null }
+          : {}),
+        addressSubmittedAt:
+          editAddr1.trim() && editCity.trim()
+            ? editingGuest.addressSubmittedAt || new Date().toISOString()
+            : null,
         members: editMembers.filter((m) => m.firstName || m.lastName),
       }),
     });
@@ -1905,6 +1932,24 @@ export default function DashboardClient() {
                 currentUrl={editVideo}
                 onVideoSaved={(url) => { setEditVideo(url); setEditDirty(true); }}
               />
+
+              <div>
+                <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-1">Mailing address</label>
+                <div className="space-y-2">
+                  <input type="text" value={editAddr1} onChange={(e) => { setEditAddr1(e.target.value); setEditDirty(true); }} placeholder="Street address" className="w-full px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                  <input type="text" value={editAddr2} onChange={(e) => { setEditAddr2(e.target.value); setEditDirty(true); }} placeholder="Apt, suite, unit (optional)" className="w-full px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                  <div className="grid grid-cols-[1fr_72px_100px] gap-2">
+                    <input type="text" value={editCity} onChange={(e) => { setEditCity(e.target.value); setEditDirty(true); }} placeholder="City" className="w-full px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                    <input type="text" value={editState} onChange={(e) => { setEditState(e.target.value); setEditDirty(true); }} placeholder="ST" className="w-full px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                    <input type="text" value={editZip} onChange={(e) => { setEditZip(e.target.value); setEditDirty(true); }} placeholder="ZIP" className="w-full px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                  </div>
+                  {!editingGuest.addressSubmittedAt && !editAddr1.trim() && (
+                    <p className="font-body text-[11px] text-ink-faint">
+                      None on file yet — adding one here counts it as collected.
+                    </p>
+                  )}
+                </div>
+              </div>
 
               <div>
                 <label className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint block mb-1">Personal note</label>
