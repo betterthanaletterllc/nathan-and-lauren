@@ -1219,7 +1219,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                   ].map(({ value, label }, i) => (
                     <div key={label} className="flex items-center gap-2 sm:gap-3">
                       <div className="text-center">
-                        <div className="w-14 sm:w-16 h-14 sm:h-16 border border-gold/40 flex items-center justify-center mb-1">
+                        <div className="w-12 sm:w-16 h-12 sm:h-16 border border-gold/40 flex items-center justify-center mb-1">
                           <span className="font-display text-xl sm:text-2xl text-ink tabular-nums" suppressHydrationWarning>
                             {mounted ? String(value).padStart(2, "0") : "--"}
                           </span>

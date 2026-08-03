@@ -553,6 +553,27 @@ export default function DashboardClient() {
 
   function openHousehold(g: Guest) {
     setEditingGuest(g);
+    // Refresh from the server so a save doesn't revert guest submissions that
+    // landed after this dashboard loaded (only while the editor is still clean).
+    fetch("/api/guests")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((all) => {
+        const fresh = Array.isArray(all) ? all.find((x: Guest) => x.id === g.id) : null;
+        if (!fresh) return;
+        setEditingGuest((cur) => (cur && cur.id === g.id ? fresh : cur));
+        setEditDirty((dirty) => {
+          if (!dirty) {
+            setEditMembers(fresh.members?.length > 0 ? fresh.members.map((m: Member) => ({ ...m })) : []);
+            setEditAddr1(fresh.addressLine1 || "");
+            setEditAddr2(fresh.addressLine2 || "");
+            setEditCity(fresh.city || "");
+            setEditState(fresh.state || "");
+            setEditZip(fresh.zip || "");
+          }
+          return dirty;
+        });
+      })
+      .catch(() => {});
     setEditName(g.name);
     setEditSide(g.side || "");
     setEditPhaseOverride(g.phaseOverride || "");
