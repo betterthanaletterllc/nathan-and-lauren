@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { guests, householdMembers, activityLog } from "@/lib/db/schema";
+import { and, eq, gte, sql } from "drizzle-orm";
 
 // Simple per-IP rate limit (per serverless instance — a deterrent, not a vault;
 // the data behind it is a wedding guest page, not a bank)
@@ -30,6 +31,16 @@ export async function POST(req: NextRequest) {
   try {
     const ip = (req.headers.get("x-forwarded-for") || "unknown").split(",")[0].trim();
     if (rateLimited(ip)) {
+      return NextResponse.json({ error: "Too many tries — give it a minute" }, { status: 429 });
+    }
+
+    // Durable backstop: the in-memory limiter resets per serverless instance, so
+    // also cap total lookups per minute site-wide via the activity log.
+    const [recent] = await db
+      .select({ n: sql<number>`count(*)` })
+      .from(activityLog)
+      .where(and(eq(activityLog.action, "invitation_lookup"), gte(activityLog.createdAt, new Date(Date.now() - 60_000))));
+    if (Number(recent?.n || 0) > 40) {
       return NextResponse.json({ error: "Too many tries — give it a minute" }, { status: 429 });
     }
 

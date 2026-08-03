@@ -50,10 +50,15 @@ export async function POST(req: NextRequest) {
       })
       .where(eq(guests.id, household.id));
 
-    // Update per-member checklist
+    // Update per-member checklist — scoped to THIS household (client ids are untrusted)
     if (memberChecklist && Array.isArray(memberChecklist)) {
+      const own = await db
+        .select({ id: householdMembers.id })
+        .from(householdMembers)
+        .where(eq(householdMembers.householdId, household.id));
+      const ownIds = new Set(own.map((m) => m.id));
       for (const mc of memberChecklist) {
-        if (mc.id) {
+        if (mc.id && ownIds.has(mc.id)) {
           await db
             .update(householdMembers)
             .set({

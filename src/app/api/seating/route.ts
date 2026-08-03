@@ -5,7 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { householdMembers } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, isNotNull } from "drizzle-orm";
 
 // POST /api/seating — save per-member seat assignments
 // Body: { assignments: [{ memberId, tableNumber, seatNumber }] }
@@ -22,14 +22,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "assignments array required" }, { status: 400 });
     }
 
-    // Clear all existing seat assignments first
-    await db
-      .update(householdMembers)
-      .set({ tableNumber: null, seatNumber: null });
-
-    // Set new assignments
+    // Apply new assignments FIRST, then clear only members no longer assigned —
+    // a mid-save failure leaves old seats intact instead of a wiped chart.
+    const assignedIds = new Set<number>();
     for (const a of assignments) {
       if (a.memberId && a.tableNumber) {
+        assignedIds.add(a.memberId);
         await db
           .update(householdMembers)
           .set({
@@ -37,6 +35,19 @@ export async function POST(req: NextRequest) {
             seatNumber: a.seatNumber ?? null,
           })
           .where(eq(householdMembers.id, a.memberId));
+      }
+    }
+
+    const seated = await db
+      .select({ id: householdMembers.id })
+      .from(householdMembers)
+      .where(isNotNull(householdMembers.tableNumber));
+    for (const s of seated) {
+      if (!assignedIds.has(s.id)) {
+        await db
+          .update(householdMembers)
+          .set({ tableNumber: null, seatNumber: null })
+          .where(eq(householdMembers.id, s.id));
       }
     }
 

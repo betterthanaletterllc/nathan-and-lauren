@@ -5,12 +5,15 @@ import { db } from "@/lib/db";
 import { guests, activityLog } from "@/lib/db/schema";
 import { eq, sql } from "drizzle-orm";
 
+const ALLOWED_ACTIONS = new Set(["opened", "calendar_saved"]);
+
 // POST /api/track — log a guest opening their link
 export async function POST(req: NextRequest) {
+  try {
   const { slug, action = "opened" } = await req.json();
 
-  if (!slug) {
-    return NextResponse.json({ error: "slug required" }, { status: 400 });
+  if (!slug || !ALLOWED_ACTIONS.has(action)) {
+    return NextResponse.json({ error: "invalid request" }, { status: 400 });
   }
 
   const [guest] = await db
@@ -49,4 +52,8 @@ export async function POST(req: NextRequest) {
   });
 
   return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("POST /api/track error:", err);
+    return NextResponse.json({ error: "bad request" }, { status: 400 });
+  }
 }

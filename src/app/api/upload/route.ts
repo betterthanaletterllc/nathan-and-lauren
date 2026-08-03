@@ -33,12 +33,15 @@ export async function POST(req: NextRequest) {
     if (!filename || !contentType) {
       return NextResponse.json({ error: "filename and contentType required" }, { status: 400 });
     }
+    if (!/^(video|image)\//.test(contentType)) {
+      return NextResponse.json({ error: "Only video or image uploads" }, { status: 400 });
+    }
 
     const s3 = getS3Client();
     const key = `videos/${slug || "general"}/${Date.now()}-${filename.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
 
     const command = new PutObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME || "wedding",
+      Bucket: process.env.R2_BUCKET_NAME || "nathanandlauren",
       Key: key,
       ContentType: contentType,
     });

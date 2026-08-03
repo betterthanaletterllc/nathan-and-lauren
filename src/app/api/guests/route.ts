@@ -81,6 +81,7 @@ export async function POST(req: NextRequest) {
           email: m.email || null,
           dietaryRestrictions: m.dietaryRestrictions || null,
           isChild: m.isChild || false,
+          isPlusOne: m.isPlusOne || false,
         }))
       );
     }
@@ -114,43 +115,60 @@ export async function PUT(req: NextRequest) {
     updates.updatedAt = new Date();
 
     // Timestamps arrive as ISO strings from the client; drizzle wants Date objects.
-    if (typeof updates.addressSubmittedAt === "string") {
-      updates.addressSubmittedAt = new Date(updates.addressSubmittedAt);
+    for (const key of ["addressSubmittedAt", "rsvpSubmittedAt", "checklistSubmittedAt", "linkSentAt", "firstOpenedAt", "calendarSavedAt"]) {
+      if (typeof updates[key] === "string") updates[key] = updates[key] ? new Date(updates[key]) : null;
     }
 
-    // Update members if provided
+    // Update members if provided — IN PLACE, keeping member ids stable.
+    // (Delete+reinsert regenerated ids, which orphaned open guest pages, the
+    // seating chart, and activity-log references. Order is constructive-first:
+    // update, insert, then delete removed — a mid-save failure never wipes data.)
     if (members && Array.isArray(members)) {
-      // Delete existing and re-insert
-      await db.delete(householdMembers).where(eq(householdMembers.householdId, id));
-      if (members.length > 0) {
-        await db.insert(householdMembers).values(
-          members.map((m: any) => ({
-            householdId: id,
-            firstName: m.firstName || "",
-            lastName: m.lastName || "",
-            phone: m.phone || null,
-            email: m.email || null,
-            dietaryRestrictions: m.dietaryRestrictions || null,
-            isChild: m.isChild || false,
-            isPlusOne: m.isPlusOne || false,
-            rsvpStatus: m.rsvpStatus || null,
-            foodChoice: m.foodChoice || null,
-            foodAllergies: m.foodAllergies || null,
-            attendingWelcome: m.attendingWelcome ?? null,
-            attendingCeremony: m.attendingCeremony ?? null,
-            attendingReception: m.attendingReception ?? null,
-            attendingBrunch: m.attendingBrunch ?? null,
-            passportConfirmed: m.passportConfirmed || false,
-            flightsBooked: m.flightsBooked || false,
-            departureDate: m.departureDate || null,
-            departureFlight: m.departureFlight || null,
-            returnDate: m.returnDate || null,
-            returnFlight: m.returnFlight || null,
-            hotelBooked: m.hotelBooked || false,
-            tableNumber: m.tableNumber ?? null,
-            seatNumber: m.seatNumber ?? null,
-          }))
-        );
+      const memberFields = (m: any) => ({
+        firstName: m.firstName || "",
+        lastName: m.lastName || "",
+        phone: m.phone || null,
+        email: m.email || null,
+        dietaryRestrictions: m.dietaryRestrictions || null,
+        isChild: m.isChild || false,
+        isPlusOne: m.isPlusOne || false,
+        rsvpStatus: m.rsvpStatus || null,
+        foodChoice: m.foodChoice || null,
+        foodAllergies: m.foodAllergies || null,
+        attendingWelcome: m.attendingWelcome ?? null,
+        attendingCeremony: m.attendingCeremony ?? null,
+        attendingReception: m.attendingReception ?? null,
+        attendingBrunch: m.attendingBrunch ?? null,
+        passportConfirmed: m.passportConfirmed || false,
+        flightsBooked: m.flightsBooked || false,
+        departureDate: m.departureDate || null,
+        departureFlight: m.departureFlight || null,
+        returnDate: m.returnDate || null,
+        returnFlight: m.returnFlight || null,
+        hotelBooked: m.hotelBooked || false,
+        tableNumber: m.tableNumber ?? null,
+        seatNumber: m.seatNumber ?? null,
+      });
+
+      const existing = await db
+        .select({ id: householdMembers.id })
+        .from(householdMembers)
+        .where(eq(householdMembers.householdId, id));
+      const existingIds = new Set(existing.map((m) => m.id));
+      const keptIds = new Set<number>();
+
+      for (const m of members) {
+        if (m.id && existingIds.has(m.id)) {
+          keptIds.add(m.id);
+          await db.update(householdMembers).set(memberFields(m)).where(eq(householdMembers.id, m.id));
+        } else {
+          await db.insert(householdMembers).values({ householdId: id, ...memberFields(m) });
+        }
+      }
+      for (const ex of existing) {
+        if (!keptIds.has(ex.id)) {
+          await db.delete(householdMembers).where(eq(householdMembers.id, ex.id));
+        }
       }
       updates.partySize = members.length;
     }

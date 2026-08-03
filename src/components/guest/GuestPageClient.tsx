@@ -150,11 +150,12 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
     seconds: Math.floor((diff / 1000) % 60),
   };
 
-  // Deadline helpers — parse YYYY-MM-DD as LOCAL date (new Date("YYYY-MM-DD") is UTC and shifts a day)
+  // Deadline helpers — deadlines end at 23:59:59 CANCÚN time (UTC-5, no DST),
+  // matching the server's enforcement exactly regardless of the guest's timezone.
   function parseLocalDate(dateStr: string): Date | null {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr || "");
     if (!m) return null;
-    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 23, 59, 59);
+    return new Date(`${m[1]}-${m[2]}-${m[3]}T23:59:59-05:00`);
   }
   function formatDeadline(dateStr: string): string {
     const d = parseLocalDate(dateStr);

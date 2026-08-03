@@ -7,11 +7,12 @@ import { eq } from "drizzle-orm";
 
 const KIDS_INTEREST_TAG = "kids interest";
 
+// Deadlines are evaluated in the venue's timezone (Cancún, UTC-5, no DST) so
+// server (UTC) and guests (any US timezone) agree on when a day ends.
 function parseLocalDeadline(dateStr: string | null | undefined): Date | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr || "");
   if (!m) return null;
-  // End of that day, local server time
-  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), 23, 59, 59);
+  return new Date(`${m[1]}-${m[2]}-${m[3]}T23:59:59-05:00`);
 }
 
 async function getSetting(key: string): Promise<string> {
@@ -39,6 +40,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Household not found" }, { status: 404 });
     }
 
+    // RSVP deadline enforced server-side too (client shows the countdown)
+    const rsvpDeadline = parseLocalDeadline(await getSetting("rsvp_deadline"));
+    if (rsvpDeadline && Date.now() > rsvpDeadline.getTime()) {
+      return NextResponse.json(
+        { error: "The RSVP window has closed — text Nathan & Lauren and they'll take care of you" },
+        { status: 403 }
+      );
+    }
+
     // Every attending guest needs a dinner selection
     for (const m of rsvpMembers) {
       if (m.rsvpStatus === "coming" && !m.foodChoice) {
@@ -49,8 +59,24 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Scope every write to THIS household — client-sent ids are untrusted
+    const existingMembers = await db
+      .select()
+      .from(householdMembers)
+      .where(eq(householdMembers.householdId, household.id));
+    const ownIds = new Set(existingMembers.map((m) => m.id));
+    let plusOneCount = existingMembers.filter((m) => m.isPlusOne).length;
+    let totalCount = existingMembers.length;
+
     // Update existing members / insert new plus-ones and children
     for (const m of rsvpMembers) {
+      if (m.id && !ownIds.has(m.id)) continue; // not this household's member — ignore
+      if (!m.id) {
+        // Inserts are capped: plus-ones need the allowance (max 1), household ≤ 12 people
+        if (m.isPlusOne && (!household.plusOneAllowed || plusOneCount >= 1)) continue;
+        if (!m.isPlusOne && !m.isChild) continue; // only plus-ones/kids may be added via RSVP
+        if (totalCount >= 12) continue;
+      }
       if (m.id) {
         await db
           .update(householdMembers)
@@ -67,16 +93,18 @@ export async function POST(req: NextRequest) {
       } else if ((m.isPlusOne || m.isChild) && m.firstName) {
         await db.insert(householdMembers).values({
           householdId: household.id,
-          firstName: m.firstName,
-          lastName: m.lastName || "",
-          phone: m.phone || null,
-          email: m.email || null,
+          firstName: String(m.firstName).slice(0, 100),
+          lastName: String(m.lastName || "").slice(0, 100),
+          phone: m.phone ? String(m.phone).slice(0, 30) : null,
+          email: m.email ? String(m.email).slice(0, 200) : null,
           isPlusOne: !!m.isPlusOne,
           isChild: !!m.isChild,
           rsvpStatus: m.rsvpStatus || "coming",
           foodChoice: m.foodChoice || null,
           foodAllergies: m.foodAllergies || null,
         });
+        totalCount++;
+        if (m.isPlusOne) plusOneCount++;
       }
     }
 
