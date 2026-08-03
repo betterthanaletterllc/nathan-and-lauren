@@ -43,7 +43,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #FAF4EF 0%, #EBE3D1 100%)",
+          background: "linear-gradient(135deg, #FAF4EF 0%, #E7DFCC 100%)",
           fontFamily: "serif",
         }}
       >
@@ -52,7 +52,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            border: "1px solid #E8D5C0",
+            border: "1px solid #DCCFAF",
             padding: "60px 80px",
             background: "#FAF4EF",
           }}
@@ -81,7 +81,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
             style={{
               fontSize: 64,
               fontWeight: 300,
-              color: "#2C2A26",
+              color: "#244C3A",
               margin: "0 0 8px",
               lineHeight: 1.1,
             }}

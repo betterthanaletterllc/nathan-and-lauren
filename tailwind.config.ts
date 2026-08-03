@@ -6,7 +6,8 @@ const config: Config = {
     extend: {
       colors: {
         // Palette sampled from the printed invitation suite (green + antique gold on ivory)
-        gold: { DEFAULT: "#B08A4A", light: "#C19A5E", pale: "#DCCFAF" },
+        gold: { DEFAULT: "#B08A4A", light: "#C19A5E", pale: "#DCCFAF", deep: "#8A6A33" },
+        error: "#9C3B2A",
         sand: { DEFAULT: "#F1EBDD", dark: "#E7DFCC" },
         ink: { DEFAULT: "#244C3A", soft: "#4F7060", faint: "#7C9384" },
       },

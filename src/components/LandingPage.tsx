@@ -177,7 +177,7 @@ export default function LandingPage() {
                         {String(value).padStart(2, "0")}
                       </span>
                     </div>
-                    <p className="font-body font-light text-[9px] tracking-[3px] uppercase text-ink-faint">
+                    <p className="font-body font-light text-[11px] tracking-[3px] uppercase text-ink-faint">
                       {label}
                     </p>
                   </div>
@@ -212,13 +212,13 @@ export default function LandingPage() {
             <button
               type="submit"
               disabled={finding}
-              className="px-6 py-3 bg-gold text-white font-body font-normal text-[12px] tracking-[3px] uppercase hover:bg-gold-light transition-colors disabled:opacity-60"
+              className="px-6 py-3 bg-gold-deep text-white font-body font-normal text-[12px] tracking-[3px] uppercase hover:bg-gold-deep/90 transition-colors disabled:opacity-60"
             >
               {finding ? "..." : "Find"}
             </button>
           </form>
           {findError && (
-            <p className="font-body font-light text-xs text-[#A0522D] text-center mt-3">{findError}</p>
+            <p className="font-body font-light text-xs text-[#9C3B2A] text-center mt-3">{findError}</p>
           )}
         </div>
 

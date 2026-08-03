@@ -17,7 +17,7 @@ export default function LoginPage() {
         </p>
         <button
           onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
-          className="w-full py-3.5 bg-gold text-white font-body font-normal text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors"
+          className="w-full py-3.5 bg-gold-deep text-white font-body font-normal text-[13px] tracking-[3px] uppercase hover:bg-gold-deep/90 transition-colors"
         >
           Sign in with Google
         </button>

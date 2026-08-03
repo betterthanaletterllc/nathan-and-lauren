@@ -94,8 +94,6 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
 
   // Kids
   const [kidsInterest, setKidsInterest] = useState(kidsInterestInitial);
-  const [kidForm, setKidForm] = useState({ first: "", last: "" });
-  const [kidError, setKidError] = useState("");
 
   // Meal changes (post-RSVP)
   const [editingMealId, setEditingMealId] = useState<number | null>(null);
@@ -135,7 +133,9 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
   });
   const [checklistSubmitting, setChecklistSubmitting] = useState(false);
 
-  // Countdown
+  // Countdown — `mounted` gates live numbers so SSR and first client paint match
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000);
@@ -192,7 +192,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
   const rsvpMissing = getRsvpMissing();
 
   // Status strip (rsvp phase onward)
-  const showStrip = phase === "rsvp" || phase === "checklist" || phase === "final";
+  const showStrip = phase === "rsvp" || phase === "checklist";
   const checklistTotal = memberChecklist.length * 3;
   const checklistDone = memberChecklist.reduce(
     (s, m) => s + (m.passportConfirmed ? 1 : 0) + (m.flightsBooked ? 1 : 0) + (m.hotelBooked ? 1 : 0),
@@ -287,38 +287,6 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
     }
   }
 
-  function addKid() {
-    const first = kidForm.first.trim();
-    const last = kidForm.last.trim();
-    if (!first) {
-      setKidError("A first name, please");
-      return;
-    }
-    const tempId = Math.min(0, ...rsvpMembers.map((m) => m.id)) - 1;
-    setRsvpMembers([
-      ...rsvpMembers,
-      {
-        id: tempId,
-        firstName: first,
-        lastName: last,
-        rsvpStatus: "coming",
-        foodChoice: "",
-        foodAllergies: "",
-        isChild: true,
-        isPlusOne: false,
-        passportConfirmed: false,
-        flightsBooked: false,
-        departureDate: null,
-        departureFlight: null,
-        returnDate: null,
-        returnFlight: null,
-        hotelBooked: false,
-      },
-    ]);
-    setKidForm({ first: "", last: "" });
-    setKidError("");
-  }
-
   function removeKid(tempId: number) {
     setRsvpMembers(rsvpMembers.filter((m) => m.id !== tempId));
   }
@@ -411,7 +379,8 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
         body: JSON.stringify({ slug: guest.slug, memberId, foodChoice: newChoice }),
       });
       if (res.ok) {
-        setRsvpMembers(rsvpMembers.map((m) => (m.id === memberId ? { ...m, foodChoice: newChoice } : m)));
+        // functional update — a plus-one add/rename landing mid-flight isn't reverted
+        setRsvpMembers((ms) => ms.map((m) => (m.id === memberId ? { ...m, foodChoice: newChoice } : m)));
         setEditingMealId(null);
       }
     } finally {
@@ -559,7 +528,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                   RSVP by <b className="font-medium text-ink">{formatDeadline(rsvpDeadline)}</b>
                 </span>
               </span>
-              {rsvpDaysLeft !== null && (
+              {mounted && rsvpDaysLeft !== null && (
                 <span className="text-gold font-medium">
                   {rsvpDaysLeft} {rsvpDaysLeft === 1 ? "day" : "days"} left
                 </span>
@@ -567,7 +536,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
             </>
           ) : (
             <>
-              <span className="text-[#6E8060] font-medium">✓ RSVP&apos;d</span>
+              <span className="text-ink-soft font-medium">✓ RSVP&apos;d</span>
               {anyoneComing && checklistTotal > 0 && (
                 <span className="inline-flex items-center gap-1.5">
                   <span className="w-1 h-1 rounded-full bg-gold" />
@@ -590,7 +559,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
             href={roomBlockLink}
             target="_blank"
             rel="noopener"
-            className="py-2.5 text-center border border-gold text-gold font-body font-medium text-[11px] tracking-[2px] uppercase hover:bg-gold hover:text-white transition-colors"
+            className="py-2.5 text-center border border-gold text-gold font-body font-medium text-[11px] tracking-[2px] uppercase hover:bg-gold-deep hover:text-white transition-colors"
           >
             Check Hotel Rooms
           </a>
@@ -599,7 +568,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
               if (!userAirport) findNearestAirport();
               window.open(getFlightsUrl(), "_blank");
             }}
-            className="py-2.5 text-center border border-gold text-gold font-body font-medium text-[11px] tracking-[2px] uppercase hover:bg-gold hover:text-white transition-colors"
+            className="py-2.5 text-center border border-gold text-gold font-body font-medium text-[11px] tracking-[2px] uppercase hover:bg-gold-deep hover:text-white transition-colors"
           >
             Check Flights
           </button>
@@ -674,6 +643,11 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
           {(phase === "rsvp" || phase === "checklist") && (
             <p className="font-display italic text-[17px] text-ink-soft mb-6 animate-fadeUp animation-delay-200">
               invite {firstName} to celebrate their wedding
+            </p>
+          )}
+          {(phase === "arrived" || phase === "final") && (
+            <p className="font-display italic text-[17px] text-ink-soft mb-6 animate-fadeUp animation-delay-200">
+              welcome {firstName} to their wedding weekend
             </p>
           )}
 
@@ -781,7 +755,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
           <div className="w-10 h-px bg-gold mx-auto mb-8 animate-fadeUp animation-delay-600" />
 
           {/* Address form or thank you */}
-          {(phase === "save_the_date" || !submitted) && (
+          {(phase === "save_the_date" || (phase === "rsvp" && !submitted)) && (
           <div className="animate-fadeUp animation-delay-700">
             {submitted ? (
               <div className="py-4">
@@ -863,7 +837,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="w-full py-3.5 bg-gold text-white font-body font-medium text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors disabled:opacity-50"
+                    className="w-full py-3.5 bg-gold-deep text-white font-body font-medium text-[13px] tracking-[3px] uppercase hover:bg-gold-deep/90 transition-colors disabled:opacity-50"
                   >
                     {submitting ? "Sending..." : "Submit Address"}
                   </button>
@@ -882,6 +856,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                   <div className="aspect-video w-full">
                     {videoUrl.includes("youtube.com") || videoUrl.includes("youtu.be") ? (
                       <iframe
+                        title="A video from Lauren & Nathan"
                         src={videoUrl.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/")}
                         className="w-full h-full"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -920,22 +895,26 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                           {m.isPlusOne && mealChangeOpen && editingPlusOneId !== m.id && (
                             <button
                               onClick={() => { setEditingPlusOneId(m.id); setPlusOneName({ first: m.firstName, last: m.lastName }); setPlusOneError(""); }}
-                              className="font-body text-[10px] tracking-[1.5px] uppercase text-gold underline underline-offset-2 ml-2"
+                              className="font-body text-[10px] tracking-[1.5px] uppercase text-ink-soft underline underline-offset-2 ml-2"
                             >
                               Edit name
                             </button>
                           )}
                         </span>
                         {editingPlusOneId === m.id && (
-                          <div className="basis-full flex gap-2 pt-1 items-center">
-                            <input type="text" value={plusOneName.first} onChange={(e) => setPlusOneName((p) => ({ ...p, first: e.target.value }))} placeholder="First name" className="min-w-0 flex-1 px-3 py-2 bg-white border border-gold-pale text-[15px] font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
-                            <input type="text" value={plusOneName.last} onChange={(e) => setPlusOneName((p) => ({ ...p, last: e.target.value }))} placeholder="Last name" className="min-w-0 flex-1 px-3 py-2 bg-white border border-gold-pale text-[15px] font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
-                            <button onClick={() => savePlusOneName(m.id)} disabled={plusOneSaving} className="px-3 py-2 bg-gold text-white font-body font-medium text-[11px] tracking-[1px] uppercase disabled:opacity-50">
-                              {plusOneSaving ? "…" : "Save"}
-                            </button>
-                            <button onClick={() => setEditingPlusOneId(null)} className="font-body text-[10px] tracking-[1px] uppercase text-ink-faint">
-                              Cancel
-                            </button>
+                          <div className="basis-full pt-1 space-y-2">
+                            <div className="grid grid-cols-2 gap-2">
+                              <input type="text" value={plusOneName.first} onChange={(e) => setPlusOneName((p) => ({ ...p, first: e.target.value }))} placeholder="First name" aria-label="Plus one first name" className="min-w-0 px-3 py-2 bg-white border border-gold-pale text-[15px] font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                              <input type="text" value={plusOneName.last} onChange={(e) => setPlusOneName((p) => ({ ...p, last: e.target.value }))} placeholder="Last name" aria-label="Plus one last name" className="min-w-0 px-3 py-2 bg-white border border-gold-pale text-[15px] font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                            </div>
+                            <div className="flex gap-2">
+                              <button onClick={() => savePlusOneName(m.id)} disabled={plusOneSaving} className="flex-1 py-2 bg-gold-deep text-white font-body font-medium text-[11px] tracking-[1px] uppercase disabled:opacity-50">
+                                {plusOneSaving ? "Saving…" : "Save"}
+                              </button>
+                              <button onClick={() => setEditingPlusOneId(null)} className="px-4 py-2 font-body text-[10px] tracking-[1px] uppercase text-ink-faint">
+                                Cancel
+                              </button>
+                            </div>
                           </div>
                         )}
                         {m.rsvpStatus === "coming" ? (
@@ -947,7 +926,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                                   onClick={() => changeMeal(m.id, mealValue(opt))}
                                   disabled={mealSavingId === m.id}
                                   className={`flex-1 py-2 text-xs font-body tracking-[1px] uppercase transition-colors disabled:opacity-50 ${
-                                    m.foodChoice === mealValue(opt) ? "bg-gold text-white" : "border border-gold-pale text-ink-soft hover:border-gold"
+                                    m.foodChoice === mealValue(opt) ? "bg-gold-deep text-white" : "border border-gold-pale text-ink-soft hover:border-gold"
                                   }`}
                                 >
                                   {mealSavingId === m.id ? "Saving..." : opt}
@@ -960,7 +939,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                               {mealChangeOpen && (
                                 <button
                                   onClick={() => setEditingMealId(m.id)}
-                                  className="font-body text-[10px] tracking-[1.5px] uppercase text-gold underline underline-offset-2"
+                                  className="font-body text-[10px] tracking-[1.5px] uppercase text-ink-soft underline underline-offset-2"
                                 >
                                   Change
                                 </button>
@@ -994,7 +973,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                                 key={opt}
                                 onClick={() => setAddPlusOneForm((p) => ({ ...p, foodChoice: mealValue(opt) }))}
                                 className={`flex-1 py-2 text-xs font-body tracking-[1px] uppercase transition-colors ${
-                                  addPlusOneForm.foodChoice === mealValue(opt) ? "bg-gold text-white" : "border border-gold-pale text-ink-soft hover:border-gold"
+                                  addPlusOneForm.foodChoice === mealValue(opt) ? "bg-gold-deep text-white" : "border border-gold-pale text-ink-soft hover:border-gold"
                                 }`}
                               >
                                 {opt}
@@ -1002,7 +981,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                             ))}
                           </div>
                           <input type="text" value={addPlusOneForm.foodAllergies} onChange={(e) => setAddPlusOneForm((p) => ({ ...p, foodAllergies: e.target.value }))} placeholder="Allergies or dietary notes (optional)" className="w-full px-3 py-2 bg-white border border-gold-pale text-[15px] font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
-                          {plusOneError && <p className="font-body font-light text-[12px] text-red-400">{plusOneError}</p>}
+                          {plusOneError && <p className="font-body font-light text-[12px] text-error">{plusOneError}</p>}
                           <div className="flex gap-2">
                             <button onClick={submitAddPlusOne} disabled={plusOneSaving} className="flex-1 py-2.5 bg-gold text-white font-body font-medium text-[11px] tracking-[2px] uppercase disabled:opacity-50 hover:bg-gold-light transition-colors">
                               {plusOneSaving ? "Adding…" : "Add plus one"}
@@ -1013,12 +992,12 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                           </div>
                         </div>
                       ) : (
-                        <button onClick={() => { setAddingPlusOne(true); setPlusOneError(""); }} className="w-full mt-3 py-2.5 border border-dashed border-gold text-gold font-body font-medium text-[11px] tracking-[2px] uppercase hover:bg-gold hover:text-white transition-colors">
+                        <button onClick={() => { setAddingPlusOne(true); setPlusOneError(""); }} className="w-full mt-3 py-2.5 border border-dashed border-gold text-gold font-body font-medium text-[11px] tracking-[2px] uppercase hover:bg-gold-deep hover:text-white transition-colors">
                           + Add your plus one
                         </button>
                       )
                     )}
-                    <p className="font-body font-light text-[12px] text-ink-faint text-center mt-3 leading-relaxed">
+                    <p className="font-body font-light text-[12px] text-ink-soft text-center mt-3 leading-relaxed">
                       {anyoneComing ? (
                         mealChangeOpen ? (
                           <>
@@ -1035,7 +1014,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                     </p>
                   </div>
                 </div>
-              ) : (
+              ) : phase === "final" ? null : (
                 <div className="space-y-4 text-left">
                   <p className="font-body font-light text-[12px] tracking-[2px] uppercase text-ink-soft text-center mb-4">
                     RSVP for your household
@@ -1051,7 +1030,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                         {m.id < 0 && (
                           <button
                             onClick={() => removeKid(m.id)}
-                            className="font-body text-[10px] tracking-[1px] uppercase text-ink-faint hover:text-red-400"
+                            className="font-body text-[10px] tracking-[1px] uppercase text-ink-faint hover:text-error"
                           >
                             Remove
                           </button>
@@ -1067,9 +1046,10 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                               arr[i] = { ...arr[i], rsvpStatus: status };
                               setRsvpMembers(arr);
                             }}
-                            className={`flex-1 py-2 font-body text-[11px] tracking-[2px] uppercase transition-colors ${
+                            aria-pressed={m.rsvpStatus === status}
+                            className={`flex-1 py-3.5 px-2 font-body text-[11px] tracking-[2px] uppercase leading-relaxed transition-colors ${
                               m.rsvpStatus === status
-                                ? status === "coming" ? "bg-gold text-white" : "bg-ink-soft text-white"
+                                ? status === "coming" ? "bg-gold-deep text-white" : "bg-ink-soft text-white"
                                 : "border border-gold-pale text-ink-soft hover:border-gold"
                             }`}
                           >
@@ -1092,7 +1072,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                                     setRsvpMembers(arr);
                                   }}
                                   className={`flex-1 py-2 text-xs font-body tracking-[1px] uppercase transition-colors ${
-                                    m.foodChoice === val ? "bg-gold text-white" : "border border-gold-pale text-ink-soft hover:border-gold"
+                                    m.foodChoice === val ? "bg-gold-deep text-white" : "border border-gold-pale text-ink-soft hover:border-gold"
                                   }`}
                                 >
                                   {label}
@@ -1137,7 +1117,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                             <p className="font-body text-[10px] tracking-[2px] uppercase text-ink-faint mb-1">Dinner selection</p>
                             <div className="flex gap-2">
                               {foodOptions.map((opt) => [opt.toLowerCase().replace(/\s+/g, "_"), opt]).map(([val, label]) => (
-                                <button key={val} onClick={() => setPlusOne({ ...plusOne, foodChoice: val })} className={`flex-1 py-2 text-xs font-body tracking-[1px] uppercase transition-colors ${plusOne.foodChoice === val ? "bg-gold text-white" : "border border-gold-pale text-ink-soft hover:border-gold"}`}>
+                                <button key={val} onClick={() => setPlusOne({ ...plusOne, foodChoice: val })} className={`flex-1 py-2 text-xs font-body tracking-[1px] uppercase transition-colors ${plusOne.foodChoice === val ? "bg-gold-deep text-white" : "border border-gold-pale text-ink-soft hover:border-gold"}`}>
                                   {label}
                                 </button>
                               ))}
@@ -1149,8 +1129,8 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                     </div>
                   )}
 
-                  {/* Kids interest */}
-                  <div className="border border-dashed border-gold-pale p-4 space-y-3">
+                  {/* Kids interest — checkbox only; names come later via text */}
+                  <div className="border border-dashed border-gold-pale p-4">
                     <label className="flex items-center gap-2 font-body text-[15px] text-ink cursor-pointer">
                       <input
                         type="checkbox"
@@ -1159,48 +1139,17 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                       />
                       I&apos;m interested in bringing my children
                     </label>
-                    {kidsInterest && (
-                      <div className="space-y-2">
-                        <div className="grid grid-cols-2 gap-2">
-                          <input
-                            type="text"
-                            value={kidForm.first}
-                            onChange={(e) => { setKidForm({ ...kidForm, first: e.target.value }); setKidError(""); }}
-                            placeholder="First name"
-                            className={inputClass}
-                          />
-                          <input
-                            type="text"
-                            value={kidForm.last}
-                            onChange={(e) => setKidForm({ ...kidForm, last: e.target.value })}
-                            placeholder="Last name"
-                            className={inputClass}
-                          />
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={addKid}
-                            className="px-5 py-2 bg-gold text-white font-body text-[11px] tracking-[2px] uppercase hover:bg-gold-light transition-colors"
-                          >
-                            Add
-                          </button>
-                          <span className={`font-body font-light text-[11px] ${kidError ? "text-red-400" : "text-ink-faint"}`}>
-                            {kidError || "Add each child when you know their names — no rush"}
-                          </span>
-                        </div>
-                      </div>
-                    )}
                   </div>
 
                   <button
                     onClick={handleRsvpSubmit}
                     disabled={rsvpSubmitting}
-                    className="w-full py-3.5 bg-gold text-white font-body font-medium text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors disabled:opacity-50"
+                    className="w-full py-3.5 bg-gold-deep text-white font-body font-medium text-[13px] tracking-[3px] uppercase hover:bg-gold-deep/90 transition-colors disabled:opacity-50"
                   >
                     {rsvpSubmitting ? "Submitting..." : "Submit RSVP"}
                   </button>
                   {(rsvpError || rsvpMissing.length > 0) && (
-                    <p className={`font-body font-light text-xs text-center ${rsvpAttempted || rsvpError ? "text-red-400" : "text-ink-faint"}`}>
+                    <p className={`font-body font-light text-xs text-center ${rsvpAttempted || rsvpError ? "text-error" : "text-ink-faint"}`}>
                       {rsvpError ||
                         (rsvpAttempted
                           ? rsvpMissing[0]
@@ -1252,7 +1201,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
 
           {/* Travel Checklist — available the moment a household RSVPs yes,
               in any phase from rsvp onward (the handoff) */}
-          {(phase === "rsvp" || phase === "checklist" || phase === "final") && rsvpSubmitted && anyoneComing && (
+          {(phase === "rsvp" || phase === "checklist") && rsvpSubmitted && anyoneComing && (
             <div className="mt-8 animate-fadeUp animation-delay-700">
               <div className="w-10 h-px bg-gold mx-auto mb-6" />
 
@@ -1271,11 +1220,11 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                     <div key={label} className="flex items-center gap-2 sm:gap-3">
                       <div className="text-center">
                         <div className="w-14 sm:w-16 h-14 sm:h-16 border border-gold/40 flex items-center justify-center mb-1">
-                          <span className="font-display text-xl sm:text-2xl text-ink tabular-nums">
-                            {String(value).padStart(2, "0")}
+                          <span className="font-display text-xl sm:text-2xl text-ink tabular-nums" suppressHydrationWarning>
+                            {mounted ? String(value).padStart(2, "0") : "--"}
                           </span>
                         </div>
-                        <p className="font-body font-light text-[8px] tracking-[2px] uppercase text-ink-faint">{label}</p>
+                        <p className="font-body font-light text-[10px] tracking-[2px] uppercase text-ink-faint">{label}</p>
                       </div>
                       {i < 3 && <span className="font-display text-sm text-gold/30 mb-4">:</span>}
                     </div>
@@ -1288,9 +1237,15 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                   <p className="font-body font-light text-sm text-ink-soft mb-1">
                     Travel checklist submitted!
                   </p>
-                  <p className="font-body font-light text-xs text-ink-faint">
-                    You can update it anytime by revisiting this page.
+                  <p className="font-body font-light text-xs text-ink-soft mb-3">
+                    Flights change, people book — update it whenever.
                   </p>
+                  <button
+                    onClick={() => setChecklistSubmitted(false)}
+                    className="py-2.5 px-6 border border-gold text-ink-soft font-body font-medium text-[11px] tracking-[2px] uppercase hover:bg-gold-deep hover:border-gold-deep hover:text-white transition-colors"
+                  >
+                    Update checklist
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-4 text-left">
@@ -1304,39 +1259,34 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                       <p className="font-body text-[11px] tracking-[2px] uppercase text-gold mb-2">
                         Step 1 — Book your room
                       </p>
-                      <p className="font-body font-light text-[15px] text-ink-soft mb-4">
-                        Book through our room block to stay with the group at our rate.
-                      </p>
                       {roomBlockLink && (
-                        <a href={roomBlockLink} target="_blank" rel="noopener" className="block py-3.5 text-center bg-gold text-white font-body font-medium text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors">
+                        <a href={roomBlockLink} target="_blank" rel="noopener" className="block py-3.5 text-center bg-gold-deep text-white font-body font-medium text-[13px] tracking-[3px] uppercase hover:bg-gold-deep/90 transition-colors">
                           Book Your Room
                         </a>
                       )}
                       {roomBlockCode && (
                         <div className="mt-3">
-                          <p className="font-body font-light text-[12px] text-ink-soft leading-relaxed flex items-center flex-wrap gap-x-1.5 gap-y-1">
+                          <p className="relative font-body font-light text-[12px] text-ink-soft leading-relaxed flex items-center flex-wrap gap-x-1.5 gap-y-1">
                             <span>Group code:</span>
                             <code className="font-body font-medium tracking-wide uppercase text-ink bg-white border border-gold-pale px-1.5 py-0.5">
                               {roomBlockCode}
                             </code>
-                            <span className="relative inline-flex">
-                              <button
-                                type="button"
-                                aria-label="When is the group code valid?"
-                                aria-expanded={showRateInfo}
-                                onClick={() => setShowRateInfo((v) => !v)}
-                                onBlur={() => setShowRateInfo(false)}
-                                className="w-4 h-4 rounded-full border border-gold text-gold text-[10px] leading-none font-body inline-flex items-center justify-center hover:bg-gold hover:text-white transition-colors"
-                              >
-                                ?
-                              </button>
-                              {showRateInfo && (
-                                <span className="absolute bottom-6 right-0 w-48 bg-white border border-gold-pale shadow-md p-3 font-body font-light text-[12px] text-ink-soft leading-relaxed z-10">
-                                  The group code is good for stays from Feb 2 to Mar 4,
-                                  2027 — come early or stay late and it still applies.
-                                </span>
-                              )}
-                            </span>
+                            <button
+                              type="button"
+                              aria-label="When is the group code valid?"
+                              aria-expanded={showRateInfo}
+                              onClick={() => setShowRateInfo((v) => !v)}
+                              onBlur={() => setShowRateInfo(false)}
+                              className="w-4 h-4 rounded-full border border-gold text-gold text-[10px] leading-none font-body inline-flex items-center justify-center hover:bg-gold-deep hover:border-gold-deep hover:text-white transition-colors"
+                            >
+                              ?
+                            </button>
+                            {showRateInfo && (
+                              <span className="absolute bottom-full mb-1.5 left-0 right-0 bg-white border border-gold-pale shadow-md p-3 font-body font-light text-[12px] text-ink-soft leading-relaxed z-10">
+                                The group code is good for stays from Feb 2 to Mar 4,
+                                2027 — come early or stay late and it still applies.
+                              </span>
+                            )}
                           </p>
                           <p className="font-body font-light italic text-[11px] text-ink-faint mt-1.5">
                             *Enter in the promotion code box if not already there
@@ -1366,7 +1316,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                             aria-expanded={showFlightInfo}
                             onClick={() => setShowFlightInfo((v) => !v)}
                             onBlur={() => setShowFlightInfo(false)}
-                            className="w-4 h-4 -mt-0.5 rounded-full border border-gold text-gold text-[10px] leading-none font-body inline-flex items-center justify-center align-middle hover:bg-gold hover:text-white transition-colors"
+                            className="w-4 h-4 -mt-0.5 rounded-full border border-gold text-gold text-[10px] leading-none font-body inline-flex items-center justify-center align-middle hover:bg-gold-deep hover:text-white transition-colors"
                           >
                             ?
                           </button>
@@ -1390,7 +1340,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                           window.open(getFlightsUrl(), "_blank");
                         }
                       }}
-                      className="w-full py-3.5 text-center border-2 border-gold text-gold font-body font-medium text-[13px] tracking-[3px] uppercase hover:bg-gold hover:text-white transition-colors"
+                      className="w-full py-3.5 text-center border-2 border-gold text-gold font-body font-medium text-[13px] tracking-[3px] uppercase hover:bg-gold-deep hover:text-white transition-colors"
                     >
                       Search Flights
                     </button>
@@ -1514,7 +1464,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                   <button
                     onClick={handleChecklistSubmit}
                     disabled={checklistSubmitting}
-                    className="w-full py-3.5 bg-gold text-white font-body font-medium text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors disabled:opacity-50"
+                    className="w-full py-3.5 bg-gold-deep text-white font-body font-medium text-[13px] tracking-[3px] uppercase hover:bg-gold-deep/90 transition-colors disabled:opacity-50"
                   >
                     {checklistSubmitting ? "Submitting..." : "Submit Checklist"}
                   </button>
@@ -1538,7 +1488,7 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                   href={resortMapUrl}
                   target="_blank"
                   rel="noopener"
-                  className="block py-3.5 text-center bg-gold text-white font-body font-medium text-[13px] tracking-[3px] uppercase hover:bg-gold-light transition-colors mb-4"
+                  className="block py-3.5 text-center bg-gold-deep text-white font-body font-medium text-[13px] tracking-[3px] uppercase hover:bg-gold-deep/90 transition-colors mb-4"
                 >
                   View Resort Map
                 </a>
@@ -1588,12 +1538,13 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
             </div>
           )}
 
-          {/* Calendar buttons */}
+          {/* Calendar buttons — pointless once the weekend has arrived */}
+          {(phase === "save_the_date" || phase === "rsvp" || phase === "checklist") && (
           <div className="mt-10 mb-2 animate-fadeUp animation-delay-800">
             <div className="border border-gold/30 bg-gold/5 p-6 text-center">
               {/* Calendar icon */}
               <div className="w-12 h-12 mx-auto mb-3 border border-gold/40 flex flex-col items-center justify-center">
-                <span className="font-body text-[8px] tracking-[2px] uppercase text-gold leading-none">Feb</span>
+                <span className="font-body text-[9px] tracking-[2px] uppercase text-gold leading-none">Feb</span>
                 <span className="font-display text-lg text-ink leading-tight">26</span>
               </div>
               <p className="font-display italic text-lg text-ink mb-1">
@@ -1605,19 +1556,20 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
               <div className="flex justify-center gap-3">
                 <button
                   onClick={() => handleCalendar("google")}
-                  className="flex-1 max-w-[180px] py-3 bg-gold text-white font-body text-[11px] tracking-[3px] uppercase hover:bg-gold-light transition-colors"
+                  className="flex-1 max-w-[180px] py-3 bg-gold-deep text-white font-body text-[11px] tracking-[3px] uppercase hover:bg-gold-deep/90 transition-colors"
                 >
                   Google Calendar
                 </button>
                 <button
                   onClick={() => handleCalendar("ics")}
-                  className="flex-1 max-w-[180px] py-3 border-2 border-gold text-gold font-body text-[11px] tracking-[3px] uppercase hover:bg-gold hover:text-white transition-colors"
+                  className="flex-1 max-w-[180px] py-3 border-2 border-gold text-gold font-body text-[11px] tracking-[3px] uppercase hover:bg-gold-deep hover:text-white transition-colors"
                 >
                   Apple / Outlook
                 </button>
               </div>
             </div>
           </div>
+          )}
         </div>
       </div>
 

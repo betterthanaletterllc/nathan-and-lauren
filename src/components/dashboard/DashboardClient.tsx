@@ -184,8 +184,10 @@ if(cities.length>0) geocodeRemaining();
     const url = URL.createObjectURL(blob);
     setIframeSrc(url);
     return () => URL.revokeObjectURL(url);
+  // Rebuild when coordinates change too (AutoGeocode backfills lat/lng without
+  // changing the guest count) — a coord fingerprint catches that.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [guests.length]);
+  }, [guests.length, guests.map((g) => `${g.latitude},${g.longitude}`).join("|")]);
 
   if (guests.length === 0) return null;
 
@@ -254,10 +256,12 @@ export default function DashboardClient() {
     const kids = guests.reduce((s, g) => s + (g.members?.filter((m: Member) => m.isChild).length || 0), 0);
     const rsvpYes = guests.reduce((s, g) => s + (g.members?.filter((m: Member) => m.rsvpStatus === "coming").length || 0), 0);
     const rsvpNo = guests.reduce((s, g) => s + (g.members?.filter((m: Member) => m.rsvpStatus === "not_coming").length || 0), 0);
-    const rsvpPending = headcount - rsvpYes - rsvpNo;
-    const passports = guests.filter((g) => g.passportConfirmed).length;
-    const flights = guests.filter((g) => g.flightsBooked).length;
-    const hotels = guests.filter((g) => g.hotelBooked).length;
+    const rsvpPending = guests.reduce((sum, g) => sum + (g.members?.filter((m: Member) => m.rsvpStatus !== "coming" && m.rsvpStatus !== "not_coming").length || 0), 0);
+    // Derived from members — the checklist writes per-member flags, not household ones
+    const coming = (g: Guest) => (g.members || []).filter((m: Member) => m.rsvpStatus === "coming");
+    const passports = guests.filter((g) => coming(g).length > 0 && coming(g).every((m: any) => m.passportConfirmed)).length;
+    const flights = guests.filter((g) => coming(g).length > 0 && coming(g).every((m: any) => m.flightsBooked)).length;
+    const hotels = guests.filter((g) => coming(g).length > 0 && coming(g).every((m: any) => m.hotelBooked)).length;
     const texted = guests.filter((g) => g.linkTexted).length;
     const withNote = guests.filter((g) => g.note).length;
     const withVideo = guests.filter((g) => g.videoUrl).length;
@@ -406,19 +410,34 @@ export default function DashboardClient() {
   }
 
   async function saveAllSettings() {
+    const failed: string[] = [];
     for (const [key, value] of Object.entries(pendingSettings)) {
-      await fetch("/api/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key, value }),
-      });
+      try {
+        const res = await fetch("/api/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key, value }),
+        });
+        if (!res.ok) failed.push(key);
+      } catch {
+        failed.push(key);
+      }
     }
-    setSettings((s) => ({ ...s, ...pendingSettings }));
+    const saved = Object.fromEntries(Object.entries(pendingSettings).filter(([k]) => !failed.includes(k)));
+    setSettings((s) => ({ ...s, ...saved }));
+    if (failed.length > 0) {
+      // keep the failed keys pending + dirty so nothing silently reads as saved
+      setPendingSettings(Object.fromEntries(Object.entries(pendingSettings).filter(([k]) => failed.includes(k))));
+      alert(`These didn't save — try again: ${failed.join(", ")}`);
+      return;
+    }
+    setEventsDraft(null);
     setPendingSettings({});
     setSettingsDirty(false);
   }
 
   function discardSettings() {
+    setEventsDraft(null);
     setPendingSettings({});
     setSettingsDirty(false);
   }
@@ -506,6 +525,11 @@ export default function DashboardClient() {
 
   // Household detail editor
   const [editingGuest, setEditingGuest] = useState<Guest | null>(null);
+  const [eventsDraft, setEventsDraft] = useState<any[] | null>(null);
+  const chkAll = (k: "passportConfirmed" | "flightsBooked" | "hotelBooked") => {
+    const coming = (editingGuest?.members || []).filter((m: any) => m.rsvpStatus === "coming");
+    return coming.length > 0 && coming.every((m: any) => (m as any)[k]);
+  };
   const [editName, setEditName] = useState("");
   const [editSide, setEditSide] = useState("");
   const [editPhaseOverride, setEditPhaseOverride] = useState("");
@@ -595,7 +619,7 @@ export default function DashboardClient() {
           ? { latitude: null, longitude: null }
           : {}),
         addressSubmittedAt:
-          editAddr1.trim() && editCity.trim()
+          editAddr1.trim() && editCity.trim() && editState.trim() && editZip.trim()
             ? editingGuest.addressSubmittedAt || new Date().toISOString()
             : null,
         members: editMembers.filter((m) => m.firstName || m.lastName),
@@ -1655,32 +1679,30 @@ export default function DashboardClient() {
                 Events shown on guest pages during the arrived phase. Displayed in order.
               </p>
               {(() => {
-                let events: any[] = [];
-                try { events = JSON.parse(getSettingValue("event_schedule", "[]")); } catch {}
+                let parsed: any[] = [];
+                try { parsed = JSON.parse(getSettingValue("event_schedule", "[]")); } catch {}
+                const events: any[] = eventsDraft ?? parsed;
+                const setEvents = (arr: any[]) => { setEventsDraft(arr); updatePending("event_schedule", JSON.stringify(arr)); };
                 return (
                   <div className="space-y-3">
                     {events.map((ev: any, i: number) => (
                       <div key={i} className="border border-gold-pale/40 p-3 space-y-2">
                         <div className="grid grid-cols-2 gap-2">
-                          <input type="text" defaultValue={ev.name} placeholder="Event name" onBlur={(e) => { const arr = [...events]; arr[i] = { ...arr[i], name: e.target.value }; updatePending("event_schedule", JSON.stringify(arr)); }} className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
-                          <input type="text" defaultValue={ev.location} placeholder="Location" onBlur={(e) => { const arr = [...events]; arr[i] = { ...arr[i], location: e.target.value }; updatePending("event_schedule", JSON.stringify(arr)); }} className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                          <input type="text" value={ev.name ?? ""} placeholder="Event name" onChange={(e) => { const arr = [...events]; arr[i] = { ...arr[i], name: e.target.value }; setEvents(arr); }} className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                          <input type="text" value={ev.location ?? ""} placeholder="Location" onChange={(e) => { const arr = [...events]; arr[i] = { ...arr[i], location: e.target.value }; setEvents(arr); }} className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
                         </div>
                         <div className="grid grid-cols-2 gap-2">
-                          <input type="text" defaultValue={ev.date} placeholder="Date (e.g. Thursday, Feb 25)" onBlur={(e) => { const arr = [...events]; arr[i] = { ...arr[i], date: e.target.value }; updatePending("event_schedule", JSON.stringify(arr)); }} className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
-                          <input type="text" defaultValue={ev.time} placeholder="Time (e.g. 6:00 PM)" onBlur={(e) => { const arr = [...events]; arr[i] = { ...arr[i], time: e.target.value }; updatePending("event_schedule", JSON.stringify(arr)); }} className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                          <input type="text" value={ev.date ?? ""} placeholder="Date (e.g. Thursday, Feb 25)" onChange={(e) => { const arr = [...events]; arr[i] = { ...arr[i], date: e.target.value }; setEvents(arr); }} className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                          <input type="text" value={ev.time ?? ""} placeholder="Time (e.g. 6:00 PM)" onChange={(e) => { const arr = [...events]; arr[i] = { ...arr[i], time: e.target.value }; setEvents(arr); }} className="px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
                         </div>
                         <div className="flex gap-2">
-                          <input type="text" defaultValue={ev.notes} placeholder="Notes (dress code, etc.)" onBlur={(e) => { const arr = [...events]; arr[i] = { ...arr[i], notes: e.target.value }; updatePending("event_schedule", JSON.stringify(arr)); }} className="flex-1 px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
-                          <button onClick={() => { const arr = events.filter((_: any, j: number) => j !== i); updatePending("event_schedule", JSON.stringify(arr)); }} className="text-red-400 text-xs hover:text-red-600 px-2">Remove</button>
+                          <input type="text" value={ev.notes ?? ""} placeholder="Notes (dress code, etc.)" onChange={(e) => { const arr = [...events]; arr[i] = { ...arr[i], notes: e.target.value }; setEvents(arr); }} className="flex-1 px-3 py-2 border border-gold-pale text-sm font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                          <button onClick={() => { const arr = events.filter((_: any, j: number) => j !== i); setEvents(arr); }} className="text-red-400 text-xs hover:text-red-600 px-2">Remove</button>
                         </div>
                       </div>
                     ))}
                     <button
-                      onClick={() => {
-                        const arr = [...events, { name: "", date: "", time: "", location: "", notes: "" }];
-                        updatePending("event_schedule", JSON.stringify(arr));
-                        fetchAll();
-                      }}
+                      onClick={() => setEvents([...events, { name: "", date: "", time: "", location: "", notes: "" }])}
                       className="text-gold text-xs font-body tracking-[1px] uppercase hover:underline"
                     >
                       + Add event
@@ -1991,15 +2013,15 @@ export default function DashboardClient() {
                   <p className="font-body text-[10px] tracking-[3px] uppercase text-ink-faint mb-3">Travel checklist</p>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm font-body">
                     <div className="flex items-center gap-2">
-                      <span className={editingGuest.passportConfirmed ? "text-green-600" : "text-ink-faint"}>{editingGuest.passportConfirmed ? "✓" : "○"}</span>
+                      <span className={chkAll("passportConfirmed") ? "text-green-600" : "text-ink-faint"}>{chkAll("passportConfirmed") ? "✓" : "○"}</span>
                       Passport
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={editingGuest.flightsBooked ? "text-green-600" : "text-ink-faint"}>{editingGuest.flightsBooked ? "✓" : "○"}</span>
+                      <span className={chkAll("flightsBooked") ? "text-green-600" : "text-ink-faint"}>{chkAll("flightsBooked") ? "✓" : "○"}</span>
                       Flights
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={editingGuest.hotelBooked ? "text-green-600" : "text-ink-faint"}>{editingGuest.hotelBooked ? "✓" : "○"}</span>
+                      <span className={chkAll("hotelBooked") ? "text-green-600" : "text-ink-faint"}>{chkAll("hotelBooked") ? "✓" : "○"}</span>
                       Hotel {editingGuest.hotelInRoomBlock === false && "(outside block)"}
                     </div>
                     <div className="flex items-center gap-2">
