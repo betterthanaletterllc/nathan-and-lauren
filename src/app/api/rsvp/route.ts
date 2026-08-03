@@ -129,16 +129,16 @@ export async function POST(req: NextRequest) {
 // Body: { slug, memberId, foodChoice, foodAllergies? }
 export async function PATCH(req: NextRequest) {
   try {
-    const { slug, memberId, foodChoice, foodAllergies } = await req.json();
+    const { slug, memberId, foodChoice, foodAllergies, action, firstName, lastName, plusOne } = await req.json();
 
-    if (!slug || !memberId || !foodChoice) {
-      return NextResponse.json({ error: "slug, memberId and foodChoice required" }, { status: 400 });
+    if (!slug) {
+      return NextResponse.json({ error: "slug required" }, { status: 400 });
     }
 
     const deadline = parseLocalDeadline(await getSetting("meal_change_deadline"));
     if (deadline && Date.now() > deadline.getTime()) {
       return NextResponse.json(
-        { error: "Meal changes are closed — text Nathan & Lauren for anything urgent" },
+        { error: "Changes are closed — text Nathan & Lauren for anything urgent" },
         { status: 403 }
       );
     }
@@ -151,6 +151,75 @@ export async function PATCH(req: NextRequest) {
 
     if (!household) {
       return NextResponse.json({ error: "Household not found" }, { status: 404 });
+    }
+
+    // Add a plus-one after the fact (allowed households only, one max)
+    if (action === "add_plus_one") {
+      if (!household.plusOneAllowed) {
+        return NextResponse.json({ error: "Plus ones aren't enabled for this invitation" }, { status: 403 });
+      }
+      if (!plusOne?.firstName || !plusOne?.foodChoice) {
+        return NextResponse.json({ error: "Name and dinner selection required" }, { status: 400 });
+      }
+      const existing = await db
+        .select()
+        .from(householdMembers)
+        .where(eq(householdMembers.householdId, household.id));
+      if (existing.some((m) => m.isPlusOne)) {
+        return NextResponse.json({ error: "A plus one is already on this RSVP" }, { status: 409 });
+      }
+      const [inserted] = await db
+        .insert(householdMembers)
+        .values({
+          householdId: household.id,
+          firstName: plusOne.firstName,
+          lastName: plusOne.lastName || "",
+          isPlusOne: true,
+          rsvpStatus: "coming",
+          foodChoice: plusOne.foodChoice,
+          foodAllergies: plusOne.foodAllergies || null,
+        })
+        .returning();
+      await db
+        .update(guests)
+        .set({ partySize: existing.length + 1, updatedAt: new Date() })
+        .where(eq(guests.id, household.id));
+      await db.insert(activityLog).values({
+        guestId: household.id,
+        action: "plus_one_added",
+        metadata: { name: `${inserted.firstName} ${inserted.lastName}`.trim(), foodChoice: inserted.foodChoice },
+      });
+      return NextResponse.json({ success: true, member: inserted });
+    }
+
+    // Edit a plus-one's name (plus-one rows only — real members are the couple's data)
+    if (action === "update_plus_one") {
+      if (!memberId || !firstName) {
+        return NextResponse.json({ error: "memberId and firstName required" }, { status: 400 });
+      }
+      const [target] = await db
+        .select()
+        .from(householdMembers)
+        .where(eq(householdMembers.id, memberId))
+        .limit(1);
+      if (!target || target.householdId !== household.id || !target.isPlusOne) {
+        return NextResponse.json({ error: "Plus one not found" }, { status: 404 });
+      }
+      const prevName = `${target.firstName} ${target.lastName}`.trim();
+      await db
+        .update(householdMembers)
+        .set({ firstName, lastName: lastName || "" })
+        .where(eq(householdMembers.id, memberId));
+      await db.insert(activityLog).values({
+        guestId: household.id,
+        action: "plus_one_updated",
+        metadata: { memberId, from: prevName, to: `${firstName} ${lastName || ""}`.trim() },
+      });
+      return NextResponse.json({ success: true });
+    }
+
+    if (!memberId || !foodChoice) {
+      return NextResponse.json({ error: "memberId and foodChoice required" }, { status: 400 });
     }
 
     const [member] = await db

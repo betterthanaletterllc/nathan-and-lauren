@@ -101,6 +101,14 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
   const [editingMealId, setEditingMealId] = useState<number | null>(null);
   const [mealSavingId, setMealSavingId] = useState<number | null>(null);
 
+  // Plus-one changes (post-RSVP)
+  const [editingPlusOneId, setEditingPlusOneId] = useState<number | null>(null);
+  const [plusOneName, setPlusOneName] = useState({ first: "", last: "" });
+  const [addingPlusOne, setAddingPlusOne] = useState(false);
+  const [addPlusOneForm, setAddPlusOneForm] = useState({ first: "", last: "", foodChoice: "", foodAllergies: "" });
+  const [plusOneSaving, setPlusOneSaving] = useState(false);
+  const [plusOneError, setPlusOneError] = useState("");
+
   // Checklist state - per person
   const [memberChecklist, setMemberChecklist] = useState(
     initialMembers.filter(m => m.rsvpStatus === "coming").map((m) => ({
@@ -410,6 +418,65 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
     }
   }
 
+  async function savePlusOneName(memberId: number) {
+    if (!plusOneName.first.trim()) return;
+    setPlusOneSaving(true);
+    setPlusOneError("");
+    try {
+      const res = await fetch("/api/rsvp", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug: guest.slug, action: "update_plus_one", memberId, firstName: plusOneName.first.trim(), lastName: plusOneName.last.trim() }),
+      });
+      if (res.ok) {
+        setRsvpMembers((ms) => ms.map((m) => (m.id === memberId ? { ...m, firstName: plusOneName.first.trim(), lastName: plusOneName.last.trim() } : m)));
+        setMemberChecklist((ms) => ms.map((m) => (m.id === memberId ? { ...m, firstName: plusOneName.first.trim(), lastName: plusOneName.last.trim() } : m)));
+        setEditingPlusOneId(null);
+      } else {
+        const d = await res.json();
+        setPlusOneError(d.error || "Couldn't save — try again");
+      }
+    } finally {
+      setPlusOneSaving(false);
+    }
+  }
+
+  async function submitAddPlusOne() {
+    if (!addPlusOneForm.first.trim() || !addPlusOneForm.foodChoice) {
+      setPlusOneError("A first name and dinner selection are required");
+      return;
+    }
+    setPlusOneSaving(true);
+    setPlusOneError("");
+    try {
+      const res = await fetch("/api/rsvp", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug: guest.slug,
+          action: "add_plus_one",
+          plusOne: {
+            firstName: addPlusOneForm.first.trim(),
+            lastName: addPlusOneForm.last.trim(),
+            foodChoice: addPlusOneForm.foodChoice,
+            foodAllergies: addPlusOneForm.foodAllergies.trim(),
+          },
+        }),
+      });
+      const d = await res.json();
+      if (res.ok && d.member) {
+        setRsvpMembers((ms) => [...ms, { ...d.member, rsvpStatus: d.member.rsvpStatus || "coming", foodChoice: d.member.foodChoice || "", foodAllergies: d.member.foodAllergies || "" }]);
+        setMemberChecklist((ms) => [...ms, { id: d.member.id, firstName: d.member.firstName, lastName: d.member.lastName, passportConfirmed: false, flightsBooked: false, departureDate: "", departureFlight: "", returnDate: "", returnFlight: "", hotelBooked: false }]);
+        setAddingPlusOne(false);
+        setAddPlusOneForm({ first: "", last: "", foodChoice: "", foodAllergies: "" });
+      } else {
+        setPlusOneError(d.error || "Couldn't add — try again");
+      }
+    } finally {
+      setPlusOneSaving(false);
+    }
+  }
+
   async function handleChecklistSubmit() {
     setChecklistSubmitting(true);
     try {
@@ -480,6 +547,40 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
 
   return (
     <div className="min-h-dvh bg-sand flex flex-col items-center justify-center p-4 sm:p-8">
+      {/* Status strip — very top of the page, stays pinned while scrolling */}
+      {showStrip && (rsvpSubmitted || rsvpDeadlineDate) && (
+        <div className="sticky top-0 z-30 w-full max-w-[480px] mb-3 px-4 py-3 bg-[#F4EDDC] border border-gold/30 shadow-sm flex items-center justify-center gap-x-3 gap-y-1 flex-wrap text-[12px] tracking-[1.5px] uppercase text-ink-soft">
+          {!rsvpSubmitted ? (
+            <>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-1 h-1 rounded-full bg-gold" />
+                <span>
+                  RSVP by <b className="font-medium text-ink">{formatDeadline(rsvpDeadline)}</b>
+                </span>
+              </span>
+              {rsvpDaysLeft !== null && (
+                <span className="text-gold font-medium">
+                  {rsvpDaysLeft} {rsvpDaysLeft === 1 ? "day" : "days"} left
+                </span>
+              )}
+            </>
+          ) : (
+            <>
+              <span className="text-[#6E8060] font-medium">✓ RSVP&apos;d</span>
+              {anyoneComing && checklistTotal > 0 && (
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-1 h-1 rounded-full bg-gold" />
+                  <span>
+                    Checklist <b className="font-medium text-ink">{checklistDone} of {checklistTotal}</b>
+                  </span>
+                </span>
+              )}
+              {!anyoneComing && <span>We&apos;ll miss you</span>}
+            </>
+          )}
+        </div>
+      )}
+
       {/* Travel quick links — utility chrome outside the invitation, like the
           enclosure cards in a physical suite */}
       {(phase === "rsvp" || phase === "checklist") && roomBlockLink && (
@@ -528,46 +629,21 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
         <div className="pointer-events-none absolute right-[10px] top-[160px] bottom-[138px] w-px bg-gradient-to-b from-transparent via-gold/70 to-transparent" />
         <div className="pointer-events-none absolute right-[15px] top-[160px] bottom-[138px] w-px bg-gradient-to-b from-transparent via-gold/40 to-transparent" />
 
-        {/* Status strip */}
-        {showStrip && (rsvpSubmitted || rsvpDeadlineDate) && (
-          <div className="sticky top-2 z-20 mx-4 mt-7 px-4 py-3 bg-[#F4EDDC] border border-gold/30 shadow-sm flex items-center justify-center gap-x-3 gap-y-1 flex-wrap text-[12px] tracking-[1.5px] uppercase text-ink-soft">
-            {!rsvpSubmitted ? (
-              <>
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="w-1 h-1 rounded-full bg-gold" />
-                  <span>
-                    RSVP by <b className="font-medium text-ink">{formatDeadline(rsvpDeadline)}</b>
-                  </span>
-                </span>
-                {rsvpDaysLeft !== null && (
-                  <span className="text-gold font-medium">
-                    {rsvpDaysLeft} {rsvpDaysLeft === 1 ? "day" : "days"} left
-                  </span>
-                )}
-              </>
-            ) : (
-              <>
-                <span className="text-[#6E8060] font-medium">✓ RSVP&apos;d</span>
-                {anyoneComing && checklistTotal > 0 && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="w-1 h-1 rounded-full bg-gold" />
-                    <span>
-                      Checklist <b className="font-medium text-ink">{checklistDone} of {checklistTotal}</b>
-                    </span>
-                  </span>
-                )}
-                {!anyoneComing && <span>We&apos;ll miss you</span>}
-              </>
-            )}
-          </div>
-        )}
 
         {/* relative => content paints ABOVE the absolutely-positioned corner art */}
         <div className="relative px-8 pt-16 pb-20 sm:px-10 sm:pt-16 sm:pb-20 text-center">
-          {/* Top label — save-the-date framing until the address is in, then invitation framing */}
-          <p className="font-body font-normal text-[10px] tracking-[6px] uppercase text-gold mb-8 animate-fadeUp">
-            {phase === "save_the_date" ? "Save the Date" : "Together with their families"}
-          </p>
+          {/* Top label — save-the-date framing until the address is in, then invitation framing.
+              Invited label matches the invite line below (same serif italic green) so the two
+              read as one sentence flowing through the names. */}
+          {phase === "save_the_date" ? (
+            <p className="font-body font-normal text-[10px] tracking-[6px] uppercase text-gold mb-8 animate-fadeUp">
+              Save the Date
+            </p>
+          ) : (
+            <p className="font-display italic text-[17px] text-ink-soft mb-6 animate-fadeUp">
+              Together with their families
+            </p>
+          )}
 
           {/* Personalized greeting (save-the-date only — the invitation wording below carries the names later) */}
           {phase === "save_the_date" && (
@@ -578,8 +654,8 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
 
           {/* Names */}
           <div className="mb-6 animate-fadeUp animation-delay-200">
-            <h1 className="font-display font-light text-[clamp(36px,10vw,46px)] leading-tight text-ink">
-              Nathan
+            <h1 className="font-display font-medium text-[clamp(28px,8vw,40px)] leading-tight text-ink">
+              Lauren Wonderly
             </h1>
             <div className="flex items-center justify-center gap-4 my-1.5">
               <span className="w-12 h-px bg-gold" />
@@ -588,14 +664,14 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
               </span>
               <span className="w-12 h-px bg-gold" />
             </div>
-            <h1 className="font-display font-light text-[clamp(36px,10vw,46px)] leading-tight text-ink">
-              Lauren
+            <h1 className="font-display font-medium text-[clamp(28px,8vw,40px)] leading-tight text-ink">
+              Nathan Butorac
             </h1>
           </div>
 
           {/* Invitation line — formal wording once the household is past save-the-date */}
           {(phase === "rsvp" || phase === "checklist") && (
-            <p className="font-display italic text-[18px] text-ink-soft mb-6 animate-fadeUp animation-delay-200">
+            <p className="font-display italic text-[17px] text-ink-soft mb-6 animate-fadeUp animation-delay-200">
               invite {firstName} to celebrate their wedding
             </p>
           )}
@@ -839,7 +915,28 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                         <span className="font-body text-[15px] text-ink flex-1">
                           {m.firstName} {m.lastName}
                           {m.isChild && <span className="text-xs text-ink-faint ml-1.5">(child)</span>}
+                          {m.isPlusOne && <span className="text-xs text-ink-faint ml-1.5">(plus one)</span>}
+                          {m.isPlusOne && mealChangeOpen && editingPlusOneId !== m.id && (
+                            <button
+                              onClick={() => { setEditingPlusOneId(m.id); setPlusOneName({ first: m.firstName, last: m.lastName }); setPlusOneError(""); }}
+                              className="font-body text-[10px] tracking-[1.5px] uppercase text-gold underline underline-offset-2 ml-2"
+                            >
+                              Edit name
+                            </button>
+                          )}
                         </span>
+                        {editingPlusOneId === m.id && (
+                          <div className="basis-full flex gap-2 pt-1 items-center">
+                            <input type="text" value={plusOneName.first} onChange={(e) => setPlusOneName((p) => ({ ...p, first: e.target.value }))} placeholder="First name" className="min-w-0 flex-1 px-3 py-2 bg-white border border-gold-pale text-[15px] font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                            <input type="text" value={plusOneName.last} onChange={(e) => setPlusOneName((p) => ({ ...p, last: e.target.value }))} placeholder="Last name" className="min-w-0 flex-1 px-3 py-2 bg-white border border-gold-pale text-[15px] font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                            <button onClick={() => savePlusOneName(m.id)} disabled={plusOneSaving} className="px-3 py-2 bg-gold text-white font-body font-medium text-[11px] tracking-[1px] uppercase disabled:opacity-50">
+                              {plusOneSaving ? "…" : "Save"}
+                            </button>
+                            <button onClick={() => setEditingPlusOneId(null)} className="font-body text-[10px] tracking-[1px] uppercase text-ink-faint">
+                              Cancel
+                            </button>
+                          </div>
+                        )}
                         {m.rsvpStatus === "coming" ? (
                           editingMealId === m.id ? (
                             <div className="basis-full flex gap-2 pt-1">
@@ -879,6 +976,46 @@ export default function GuestPageClient({ guest, members: initialMembers, note, 
                         <span className="font-body text-[15px] text-ink flex-1">Children</span>
                         <span className="font-display italic text-[17px] text-ink-soft">Interested — names to come</span>
                       </div>
+                    )}
+
+                    {/* Add a plus-one after the fact (same window as meal changes) */}
+                    {guest.plusOneAllowed && anyoneComing && mealChangeOpen && !rsvpMembers.some((m) => m.isPlusOne) && (
+                      addingPlusOne ? (
+                        <div className="mt-3 pt-3 border-t border-gold-pale/50 space-y-2">
+                          <p className="font-body text-[10px] tracking-[2px] uppercase text-gold">Add your plus one</p>
+                          <div className="flex gap-2">
+                            <input type="text" value={addPlusOneForm.first} onChange={(e) => setAddPlusOneForm((p) => ({ ...p, first: e.target.value }))} placeholder="First name" className="min-w-0 flex-1 px-3 py-2 bg-white border border-gold-pale text-[15px] font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                            <input type="text" value={addPlusOneForm.last} onChange={(e) => setAddPlusOneForm((p) => ({ ...p, last: e.target.value }))} placeholder="Last name" className="min-w-0 flex-1 px-3 py-2 bg-white border border-gold-pale text-[15px] font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                          </div>
+                          <div className="flex gap-2">
+                            {foodOptions.map((opt) => (
+                              <button
+                                key={opt}
+                                onClick={() => setAddPlusOneForm((p) => ({ ...p, foodChoice: mealValue(opt) }))}
+                                className={`flex-1 py-2 text-xs font-body tracking-[1px] uppercase transition-colors ${
+                                  addPlusOneForm.foodChoice === mealValue(opt) ? "bg-gold text-white" : "border border-gold-pale text-ink-soft hover:border-gold"
+                                }`}
+                              >
+                                {opt}
+                              </button>
+                            ))}
+                          </div>
+                          <input type="text" value={addPlusOneForm.foodAllergies} onChange={(e) => setAddPlusOneForm((p) => ({ ...p, foodAllergies: e.target.value }))} placeholder="Allergies or dietary notes (optional)" className="w-full px-3 py-2 bg-white border border-gold-pale text-[15px] font-body font-light text-ink placeholder:text-ink-faint focus:outline-none focus:border-gold" />
+                          {plusOneError && <p className="font-body font-light text-[12px] text-red-400">{plusOneError}</p>}
+                          <div className="flex gap-2">
+                            <button onClick={submitAddPlusOne} disabled={plusOneSaving} className="flex-1 py-2.5 bg-gold text-white font-body font-medium text-[11px] tracking-[2px] uppercase disabled:opacity-50 hover:bg-gold-light transition-colors">
+                              {plusOneSaving ? "Adding…" : "Add plus one"}
+                            </button>
+                            <button onClick={() => { setAddingPlusOne(false); setPlusOneError(""); }} className="px-4 py-2.5 font-body text-[10px] tracking-[1px] uppercase text-ink-faint">
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button onClick={() => { setAddingPlusOne(true); setPlusOneError(""); }} className="w-full mt-3 py-2.5 border border-dashed border-gold text-gold font-body font-medium text-[11px] tracking-[2px] uppercase hover:bg-gold hover:text-white transition-colors">
+                          + Add your plus one
+                        </button>
+                      )
                     )}
                     <p className="font-body font-light text-[12px] text-ink-faint text-center mt-3 leading-relaxed">
                       {anyoneComing ? (
